@@ -1,0 +1,105 @@
+
+Beispiel für Prozedur "myintersect(ideal i,ideal j)":
+
+
+> ring r=integer,(x,y,z),dp;
+> ideal i=x,3;
+> i=std(i);
+> i;
+i[1]=3
+i[2]=x
+> ideal j=y,8;
+> j=std(j);
+> j;
+j[1]=8
+j[2]=y
+> intersect(i,j);
+_[1]=24
+_[2]=9y
+_[3]=8x
+> proc myintersect(ideal i, ideal j) {                                               // computes the intersection of two ideals i and j                                           
+	i=std(i)		;                                                    // compute standardbases of i and j
+	j=std(j)		;
+	def BAS = basering;
+	if (charstr(BAS)=="integer")                                                 // if the ideal is in the polynomial ring over the ring of integers 
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";            
+	}
+	else                                                                         // if the ideal is in a polynomial ring over a field
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2="+charstr(BAS)+",("+varstr(BAS)+",t),dp;";    
+	}
+	
+	execute(tempstr);                                                            // for i=(f_1,...,f_s) and j=(g_1,...,g_t) compute the ideal
+	ideal J = 0;                                                                 // J=(tf_1,...,tf_s,(1-t)g_1,...,(1-t)g_t)
+	int k;
+	ideal ii=fetch(BAS,i);                                                       // then we eliminate "t" from J and map the new J to our basering
+	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	}
+	ideal jj=fetch(BAS,j);
+	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	}
+	ideal e=eliminate(J,t);
+	setring BAS;
+	return(fetch(r2,e));
+};
+> myintersect(i,j);
+_[1]=-24
+_[2]=3y
+_[3]=-8x
+_[4]=xy
+
+Prozedur Schritt für Schritt zum Beispiel:
+
+> def BAS = basering;
+> charstr(BAS);
+integer
+> string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";
+> tempstr;
+ring r2=integer,(x,y,z,t),dp;
+> execute(tempstr);
+> ideal J = 0;
+> int k;
+> ideal ii=fetch(BAS,i);
+> ii;
+ii[1]=3
+ii[2]=x
+> 	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	};
+> J;
+J[1]=0
+J[2]=3t
+J[3]=xt
+> ideal jj=fetch(BAS,j);
+> jj;
+jj[1]=8
+jj[2]=y
+> 	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	};
+> J;
+J[1]=0
+J[2]=3t
+J[3]=xt
+J[4]=-8t+8
+J[5]=-yt+y
+> ideal e=eliminate(J,t);
+> e;
+e[1]=-24
+e[2]=3y
+e[3]=-8x
+e[4]=xy
+> setring BAS;
+> fetch(r2,e);
+_[1]=-24
+_[2]=3y
+_[3]=-8x
+_[4]=xy
+> 

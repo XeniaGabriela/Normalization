@@ -1,0 +1,450 @@
+                     SINGULAR                                 /
+ A Computer Algebra System for Polynomial Computations       /   version 3-1-2
+                                                           0<
+ by: W. Decker, G.-M. Greuel, G. Pfister, H. Schoenemann     \   Oct 2010
+FB Mathematik der Universitaet, D-67653 Kaiserslautern        \
+> ring r=integer,(x,y,z),dp;
+
+> proc elimvar(ideal i)   
+"Internal procedure - no help and no example available
+"                                                      
+{                                                                             
+	def BAS=basering;                                                     
+	int n=size(i);                                                         
+	int j;       
+	for(j=1;j<=n;j++)                                                      
+   //--- looking for linear monomials in all generators of i
+	{
+
+                if (deg(i[j]) == -1)    
+                {
+                 j=j+1;
+                } 
+		
+
+                poly tt=jet(i[j],1)-jet(i[j],0);  
+                             
+   //--- linear monomials found (the polynomial tt can be a sum of several linear monomials)
+
+		int pos=0;                                                    
+		int k    ;
+		for(k=1;k<=size(tt);k++)
+		{                                                                           
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))  
+			{
+				pos=k;
+			}
+		}
+
+		if (pos > 0)                                                  
+		{
+		poly t=tt[pos];                                               
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+		{
+			poly v=leadcoef(t)*t;                                  
+			int b = 0           ;
+			int k               ;
+			poly rest=i[j]-t    ;                                                            
+			for(k=1;k<=size(rest);k++)                             
+			{
+				if (reduce(rest[k],v) == 0)
+				{
+					b = 1;
+				}
+			}
+			if (b == 0)                                            
+			{
+				if (leadcoef(t) == 1)
+				{
+					poly replace=-(i[j]-t);
+				}
+				else
+				{
+					poly replace=i[j]-t   ;
+				}
+				ideal QQ = subst(i,v,replace) ;  
+
+                 //--- substitute the variable v by the polynomial replace
+
+				string s=varstr(BAS)   ;
+				string strv = string(v);
+				int p=find(s,strv)     ;  
+
+                 //--- remove the variable v from the string of variables                         
+
+				if (p > 1 && p < size(s))
+				{
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+				}                                             
+
+				if (p == 1)                                        
+				{
+					string ns=string(s[2+size(strv)..size(s)])  ;
+				}
+				
+				if (p+size(strv)-1 == size(s))
+				{
+					string ns=string(s[1..size(s)-size(strv)-1]);
+				}
+				print(strv)   ;
+				print(ns)     ;
+				print(p)      ;
+				print(size(s));
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";  
+
+                //--- compute in the ring over the integers with the reduced string of variables
+
+				execute(tmpstr)         ;
+				ideal eli=imap(BAS,QQ)  ;                           
+				list result=elimvar(eli);                           
+				result[3]=1             ;	                          
+				                       
+                //--- list result=newR1,"eli",1;   
+                     
+				setring BAS             ;
+				return(result)          ;
+			}
+		}
+		}
+	}
+	ideal eli=i;
+	export(eli);
+	list result = BAS,"eli",0;
+	return(result);
+};
+
+> proc elimvars(ideal i) 
+"Internal procedure - no help and no example available
+"                                        
+{
+	def BAS=basering;
+	ideal el=i      ;
+	int eee = 1     ;
+	def newR=BAS    ;
+	while(eee == 1)
+	{
+		list l=elimvar(el);
+		if(l[3] == 0)                                // if every generator of i has been checked for linear terms
+		{                                            
+			eee=0                  ;
+			export(el)             ;
+			list result = newR,"el";
+			setring BAS            ;
+			return(result)         ;
+		}
+		else                                        // if v divides no other term in i[j] during the algorithm elimvar(i)
+		{                                           // compute with the ideal eli instead of i in the ring newR1 
+			def newR = l[1]        ;            // from the procedure elimvar(i)
+			setring newR           ;
+			ideal el=eli           ;
+		}
+	}
+};
+
+1.BEISPIEL 14.3.:
+
+> ideal i=x2-y+z,4z3y,2y5z2+x3;
+> elimvar(i);
+// ** redefining k **
+// ** _ is no standard basis
+// ** _ is no standard basis
+y
+x,z
+3
+5
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1                                                           // Es gab etwas zu eliminieren!
+
+
+
+> elimvars(i);
+// ** redefining k **
+// ** _ is no standard basis
+// ** _ is no standard basis
+y
+x,z
+3
+5
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   el
+
+2.BEISPIEL 14.3.:
+
+> ideal i=x2-y+z, y3z2;
+// ** redefining i **
+> elimvar(i);
+// ** redefining k **
+// ** _ is no standard basis
+// ** _ is no standard basis
+y
+x,z
+3
+5
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1                                                         // Es gab etwas zu eliminieren!
+
+> elimvars(i);
+// ** redefining k **
+// ** _ is no standard basis
+// ** _ is no standard basis
+y
+x,z
+3
+5
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   el
+> 
+
+SCHRITTWEISE:
+
+> poly tt=-y+z;
+> poly t=-y;
+> poly v=y;
+> poly rest=i[1]-t    ;
+> rest;
+x2+z
+> reduce(rest[1],v);
+// ** _ is no standard basis
+x2
+> reduce(rest[2],v);
+// ** _ is no standard basis
+z
+> poly replace=i[1]-t   ;
+> replace;
+x2+z
+> ideal QQ = subst(i,v,replace) ;
+> QQ;
+QQ[1]=0
+QQ[2]=x6z2+3x4z3+3x2z4+z5
+> ring R=integer,(x,z),dp;
+> ideal eli=imap(r,QQ)  ;
+> eli;
+eli[1]=0
+eli[2]=x6z2+3x4z3+3x2z4+z5
+> elimvar(eli);
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   0                                            // Hier gab es nichts zu eliminieren
+> result[3]=1             ;                     // Deswegen ist es 1 im Output
+
+3.BEISPIEL 14.3.:
+
+> ideal I=y5+x,z3-y;
+> elimvar(I);
+// ** redefining k **
+// ** _ is no standard basis
+x
+y,z
+1
+5
+// ** redefining k **
+// ** _ is no standard basis
+y
+z
+1
+3
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1                                           // Es gab was zu eliminieren!
+
+> elimvars(I);
+// ** redefining k **
+// ** _ is no standard basis
+x
+y,z
+1
+5
+// ** redefining k **
+// ** _ is no standard basis
+y
+z
+1
+3
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   el
+
+
+4.BEISPIEL 14.3.:
+
+> ideal I=y5+x,z3-y,4xy;
+> elimvar(I);
+x
+y,z
+1
+5
+> setring r;
+y
+z
+1
+3
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1                                        // Es gab was zu eliminieren!
+
+> elimvars(I);
+x
+y,z
+1
+5
+y
+z
+1
+3
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   el
+
+
+5. BEISPIEL 14.3.
+
+> ideal J=x5+4x,y3z;
+> elimvar(J);
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   0                                          // Hier gab es nichts zu eliminieren
+> elimvars(J);
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   el
+> 
+
+> ideal j=x3-3z,xy2+y;
+> elimvar(j);
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   0                                                // Hier gab es nichts zu eliminieren
+
+> elimvars(j);
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   el
+
+6. BEISPIEL 14.3.:
+
+> ideal ii=3z-2x2y,7z3x+y;
+> elimvar(ii);
+y
+x,z
+3
+5
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1                                                   // Es gab was zu eliminieren!
+> 
+
+> elimvars(ii);
+y
+x,z
+3
+5
+
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x z
+//        block   2 : ordering C
+[2]:
+   el
+> 

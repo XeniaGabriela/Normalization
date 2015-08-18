@@ -1,0 +1,85 @@
+                     SINGULAR                                 /
+ A Computer Algebra System for Polynomial Computations       /   version 3-1-2
+                                                           0<
+ by: W. Decker, G.-M. Greuel, G. Pfister, H. Schoenemann     \   Oct 2010
+FB Mathematik der Universitaet, D-67653 Kaiserslautern        \
+> ring r=0,(x,y,z),dp;
+> ideal i=x3-y2;
+> LIB "normal.lib";
+// ** loaded /usr/share/Singular/LIB/normal.lib (13488,2010-10-14)
+// ** loaded /usr/share/Singular/LIB/algebra.lib (12436,2010-01-15)
+// ** loaded /usr/share/Singular/LIB/matrix.lib (12898,2010-06-23)
+// ** loaded /usr/share/Singular/LIB/nctools.lib (13467,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/random.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/reesclos.lib (1.32,2001/01/16)
+// ** loaded /usr/share/Singular/LIB/hnoether.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/primitiv.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/ring.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/inout.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/presolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/elim.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/primdec.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/absfact.lib (13534,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/triang.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/sing.lib (12394,2010-01-04)
+// ** loaded /usr/share/Singular/LIB/poly.lib (12443,2010-01-19)
+// ** loaded /usr/share/Singular/LIB/general.lib (13499,2010-10-15)
+> help;
+// ** Displaying help in browser 'emacs'.
+// ** Use 'system("--browser", <browser>);' to change browser,
+// ** where <browser> can be: "htmlview", "firefox", "xinfo", "info", "builtin", "dummy", "emacs".
+> ideal J=x,y;
+> poly p=x;
+> list L=std(i),i,J,p;
+> L;
+[1]:
+   _[1]=x3-y2
+[2]:
+   _[1]=x3-y2
+[3]:
+   _[1]=x
+   _[2]=y
+[4]:
+   x
+> list l=homJJ(L);
+   ? `homJJ` is not defined
+   ? error occurred in or before STDIN line 10: `list l=homJJ(L);`
+> list l=HomJJ(L);
+> l;
+[1]:
+   //   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+[2]:
+   0
+[3]:
+   -1
+> def end=l[1];
+> end;
+//   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> endid;
+   ? `endid` is undefined
+   ? error occurred in or before STDIN line 15: `endid;`
+> setring end;
+> end;
+//   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> endid;
+endid[1]=0
+> map psi=r,endphi;
+> psi;
+psi[1]=T(2)^2
+psi[2]=T(2)^3
+psi[3]=T(1)
+> l[3];
+-1
+> 

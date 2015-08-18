@@ -1,0 +1,33 @@
+
+ . .5 getSmallestZ         
+
+-------------------
+
+*Syntax:*
+     `getSmallestZ (' ideal_expression `)'
+
+*Type:*
+     poly
+
+*Purpose:*
+      computes the polynomial of smallest degree and coefficient 
+      of the input basis of a given ideal j.
+
+
+*Example:*
+         LIB "normalint.lib";
+         ring  r = integer,(u,v,w),dp;
+         ideal i=u,12w3,3v;
+         ideal j=5u2,8w,v5;
+         myintersect(i,j);
+         ==> _[1]=24vw
+         ==> _[2]=8uw
+         ==> _[3]=5u2
+         ==> _[4]=24w3
+         ==> _[5]=u2w
+         ==> _[6]=3v5
+         ==> _[7]=uv5
+
+* Menu:
+
+

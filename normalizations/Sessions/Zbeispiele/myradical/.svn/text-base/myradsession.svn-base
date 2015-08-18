@@ -1,0 +1,141 @@
+
+Beispiel für Prozedur "myradical(ideal i)":
+
+> ring r=0,(x,y,z),dp;
+> LIB "all.lib";
+> ideal i=x3,4y2;
+> i;
+i[1]=x3
+i[2]=4y2
+> proc myradical(ideal i) {                                                 
+	i=std(i)		;                                             // computes the radical of a given ideal i
+	def BAS = basering	;
+	if (charstr(BAS)=="integer")                                          // if the ideal is in the polynomial ring over the ring of integers 
+	{                                                                     // set p=product of all variables
+		int j		;                                             // compute the ideal (i,p), eliminate p from i and call the new ideal e
+		poly p = 1	;                                             // if e is the whole ring, then the radical of i is the whole ring
+		for(j = 1;j<=nvars(BAS);j++)                       
+		{
+			p = p*var(j);
+		}
+		ideal e = eliminate(i,p);
+		ideal radi=1;
+		if(e[1]==1 || e[1] == -1)
+		{
+			return(radi) ;
+		}
+		if(e[1]!=0)                                                  // if we have an integer k, but not zero as the first generator of e
+		{                                                            // take the primefactors of k  
+			string tempstr="int k="+string(e[1])+";";            // compute the radicals of i in characteristics of all primefactors
+			execute(tempstr);                                    // map it back to the basering and add the primefactor to the ideal
+			list prdiv = primefactors(k)[1];                     // the intersection of them is the radical of i
+			for(j=1; j <= size(prdiv[1]); j++)
+			{
+				ring rj = prdiv[1][j],x(1..nvars(BAS)),dp;
+				ideal radij = radical(fetch(BAS,i));
+				radij = std(radij)		   ;
+				setring BAS;
+				ideal radij2=fetch(rj,radij);
+				radij2=radij2,prdiv[1][j];
+				radij2 = std(radij2)	 ;
+				radi=myintersect(radi,radij2);
+			}
+		}
+		else                                                        
+		{                                                           // if there is no integer in i
+			poly g=1;                                           
+			for(j=1; j<= size(i); j++)                           
+			{                                                   // poly g = (product of the leading coefficients of all generators of i)
+				g = g*leadcoef(i[j]);                   
+			}
+			ideal rig = i,g;                                    // add g to i and compute its radical over the integers
+			rig=myradical(rig);                                 
+			ring rq=0,x(1..nvars(BAS)),dp;
+			ideal riq=radical(fetch(BAS,i));                    // then map it to the polynomial ring over the rationals
+			riq=std(riq)		       ;                    // and compute its radical again
+			ideal B	   ;
+			for(j=1;j<=size(riq);j++)                           // cancel the denominators of its generators
+			{
+				B[j]=cleardenom(riq[j]) ;
+			}                                                   // poly s = (product of the leading coefficients of all these generators)
+			poly s=1 ;                                          // compute the saturation of the radical with cancelled denominators
+			for(j=1;j<=size(B);j++)                             // w.r.t. s in the polynomial ring over the integers
+			{                                                   // the intersection of this saturation and the radical of the ideal (i,g)
+				s=s*leadcoef(B[j]) ;                        // is the radical of the original i
+			}                                                    
+			setring BAS		;
+			ideal riginf=mysat(fetch(rq,B),fetch(rq,s));
+			radi=myintersect(rig,riginf);
+		}
+		return(radi);
+	} else {                                                            // if the ideal is in a polynomial ring over a field
+		return(radical(i));                                         // use the original function "radical(_)"
+	}
+};
+> myradical(i);
+_[1]=y
+_[2]=x
+> ideal j=9,x2;
+> myradical(j);
+_[1]=1
+
+Nun die gleiche Prozedur in Z[x,y,z]:
+
+> ring R=integer,(x,y,z),dp;
+> proc myintersect(ideal i, ideal j) {                                               // computes the intersection of two ideals i and j                                           
+	i=std(i)		;                                                    // compute standardbases of i and j
+	j=std(j)		;
+	def BAS = basering;
+	if (charstr(BAS)=="integer")                                                 // if the ideal is in the polynomial ring over the ring of integers 
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";            
+	}
+	else                                                                         // if the ideal is in a polynomial ring over a field
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2="+charstr(BAS)+",("+varstr(BAS)+",t),dp;";    
+	}
+	
+	execute(tempstr);                                                            // for i=(f_1,...,f_s) and j=(g_1,...,g_t) compute the ideal
+	ideal J = 0;                                                                 // J=(tf_1,...,tf_s,(1-t)g_1,...,(1-t)g_t)
+	int k;
+	ideal ii=fetch(BAS,i);                                                       // then we eliminate "t" from J and map the new J to our basering
+	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	}
+	ideal jj=fetch(BAS,j);
+	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	}
+	ideal e=eliminate(J,t);
+	setring BAS;
+	return(fetch(r2,e));
+};
+> proc mysat(ideal i, poly f)                                                  
+{                                                                              // computes the saturation of an ideal i over the ring of integers
+	def BAS = basering	;                                              // w.r.t. a poly f by mapping them to the polynomial 
+	ring newR = integer,(X(1..nvars(BAS)),T),dp ;                          // ring over the ring of integers plus one new variable T,
+	map psi=BAS,maxideal(1)				 ;                     // compute the ideal Q=(psi(i),1-T*psi(f)), eliminate T  
+	ideal Q=psi(i),1-T*psi(f)			 ;                     // from Q and then mapping it back to the basering.
+	Q=std(Q)					 ;
+	ideal e=eliminate(Q,T)				 ;
+	setring BAS					 ;
+	ideal result=fetch(newR,e)			 ;
+	return(result)					 ;
+};
+> ideal i=imap(r,i);
+> i;
+i[1]=x3
+i[2]=4y2
+> myradical(i);
+_[1]=-2y
+_[2]=-x
+> ideal j= imap(r,j);
+> j;
+j[1]=9
+j[2]=x2
+> myradical(j);
+_[1]=-3
+_[2]=x
+ 

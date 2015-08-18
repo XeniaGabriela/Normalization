@@ -1,0 +1,184 @@
+
+> ring r=integer,(x,y,z),dp;
+
+> proc elimvar(ideal i)
+{
+	def BAS=basering;
+	int n=size(i);
+	int j;
+	for(j=1;j<=n;j++)
+	{
+
+                if (deg(i[j]) == -1)    
+                {
+                 j=j+1;
+                }                 
+		
+
+                  // --- Schauen, ob lineare Monome in i[j] existieren
+		poly tt=jet(i[j],1)-jet(i[j],0);
+		  // --- Monome gefunden
+		int pos=0;
+		int k;
+		for(k=1;k<=size(tt);k++)
+		{
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+			{
+				pos=k;
+			}
+		}
+
+		if (pos > 0)
+		{
+		poly t=tt[pos];
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+		{
+			poly v=leadcoef(t)*t;
+			int b = 0;
+			int k;
+			poly rest=i[j]-t;
+			for(k=1;k<=size(rest);k++)
+			{
+				if (reduce(rest[k],v) == 0)
+				{
+					b = 1;
+				}
+			}
+			if (b == 0)
+			{
+				if (leadcoef(t) == 1)
+				{
+					poly replace=-(i[j]-t);
+				}
+				else
+				{
+					poly replace=i[j]-t;
+				}
+				ideal QQ = subst(i,v,replace);
+				string s=varstr(BAS);
+				string strv = string(v);
+				int p=find(s,strv);
+
+				if (p > 1 && p < size(s))
+				{
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+				}
+
+				if (p == 1)
+				{
+					string ns=string(s[2+size(strv)..size(s)]);
+				}
+				
+				if (p+size(strv)-1 == size(s))
+				{
+					string ns=string(s[1..size(s)-size(strv)-1]);
+				}
+				
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+
+				execute(tmpstr);
+				ideal eli=imap(BAS,QQ);
+				list result=elimvar(eli);
+				result[3]=1;				
+				setring BAS;
+				return (result);
+			}
+		}
+		}
+	}
+	ideal eli=i;
+	export(eli);
+	list result = BAS,"eli",0;
+	return(result);
+}
+
+proc elimvars(ideal i)
+{
+	def BAS=basering;
+	ideal el=i;
+	int eee = 1;
+	def newR=BAS;
+	while(eee == 1)
+	{
+		list l=elimvar(el);
+                l;
+		if(l[3] == 0)
+		{
+			eee=0;
+			export(el);
+			list result = newR,"el";
+			setring BAS;
+			return(result);
+		}
+		else
+		{
+			def newR = l[1];
+			setring newR;
+			ideal el=eli;
+                        el;
+		}
+	}
+};
+> ideal i=z2-x,xz-y,x2-yz;
+> elimvar(i);
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1
+> def newR=elimvar(i)[1];
+> setring newR;
+> eli;
+eli[1]=0
+eli[2]=0
+eli[3]=0
+
+> setring r;
+> elimvars(i);
+[1]:
+   //   coeff. ring is : Integers                // l=elimvar(i) im ersten loop
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   1
+// ** redefining newR **                        // newR=l[1]
+el[1]=0                                        // el;
+el[2]=0
+el[3]=0
+// ** redefining l **                          
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers              // l=elimvar(el)
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   0                                          // l[3]=0 also springt er zum oberen loop
+[1]:
+   //   coeff. ring is : Integers             // Ergebnis
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    z
+//        block   2 : ordering C
+[2]:
+   el
+
+> def newr=elimvars(i)[1];
+> setring newr;
+> el;
+el[1]=0
+el[2]=0
+el[3]=0
+> 

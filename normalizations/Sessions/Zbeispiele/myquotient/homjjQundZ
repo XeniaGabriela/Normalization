@@ -1,0 +1,268 @@
+KUSPE IN Q[X,Y,Z] 16.3.:                                                                                                                                                                
+
+> ring r=0,(x,y,z),dp;                                                                                          
+> ideal i=x3-y2;                                                                                               
+> LIB "normal.lib";
+> ideal J=x,y;
+> poly p=x;
+> list L=std(i),i,J,p;
+> L;
+[1]:
+   _[1]=x3-y2
+[2]:
+   _[1]=x3-y2
+[3]:
+   _[1]=x
+   _[2]=y
+[4]:
+   x
+> list l=HomJJ(L);                                                                                             
+> l;
+[1]:
+   //   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+[2]:
+   0                                  // an integer = 1 if phi is an isomorphism, 0 if not
+[3]:
+   -1                                 // VR-Dimension
+> def end=l[1];
+> setring end;
+> end;
+//   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> endid;
+endid[1]=0
+> map psi=r,endphi;
+> psi;
+psi[1]=T(2)^2
+psi[2]=T(2)^3
+psi[3]=T(1)
+> l[3];
+-1                                  // VR-Dimension
+
+
+KUSPE IN Q[X,Y] 16.3.:
+
+*Example:* aus library
+     LIB "normal.lib";
+     ring r   = 0,(x,y),wp(2,3);
+     ideal id = y^2-x^3;
+     ideal J  = x,y;
+     poly p   = x;
+     list Li  = std(id),id,J,p;
+     list L   = HomJJ(Li);
+     def end = L[1];    // defines ring L[1], containing ideals endid, endphi
+     setring end;       // makes end the basering
+     end;
+     ==> //   characteristic : 0
+     ==> //   number of vars : 1
+     ==> //        block   1 : ordering dp
+     ==> //                  : names    T(1)
+     ==> //        block   2 : ordering C
+     endid;             // end/endid is isomorphic to End(r/id) as ring
+     ==> endid[1]=0
+     map psi = r,endphi;// defines the canonical map r/id -> End(r/id)
+     psi;
+     ==> psi[1]=T(1)^2
+     ==> psi[2]=T(1)^3
+     L[3];              // contribution to delta
+     ==> 1
+
+
+
+KUSPE IN Z[X,Y] 16.3.:
+
+> homjj(i,j);
+
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) T(2)
+//        block   2 : ordering C
+[2]:
+   homj
+[3]:
+   1
+
+
+
+
+
+
+
+E_8 IN Z[X,Y,Z] 17.3.:
+
+> ideal i=x3+y5+z2;
+> testideal(i);
+_[1]=-z
+_[2]=-y
+_[3]=-x
+> ideal j=testideal(i);
+> homjj(i,j);
+
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   homj                      // (homj[1]=X(3)-T(2),homj[2]=-X(2)^5-X(1)^3-T(2)^2)
+[3]:
+   1
+
+
+E_8 IN Q[X,Y,Z] 17.3.:
+
+> ring R=0,(x,y,z),dp;
+> ideal i=imap(r,i);
+> i;
+i[1]=y5+x3+z2
+> ideal j=imap(r,j);
+> j;
+j[1]=-z
+j[2]=-y
+j[3]=-x
+> poly p=x;
+> list L=std(i),i,j,p;
+> list l=HomJJ(L);
+> def end=l[1];
+> setring end;
+> end;
+//   characteristic : 0
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    T(1) T(2) T(3)
+//        block   2 : ordering C
+> endid;
+endid[1]=T(2)^5+T(1)^3+T(3)^2
+> map psi = r,endphi;                            // defines the canonical map r/i -> End(r/i)
+> psi;
+psi[1]=T(1)
+psi[2]=T(2)
+psi[3]=T(3)
+> l[2];
+1                                                // phi ist Isomprhismus
+> l[3];
+0                                                // VR-Dimension
+
+
+
+E_8 IN Z[X,Y,Z] SCHRITTWEISE FÜR a=-z 17.3.:                                                SCHRITTWEISE FÜR a=x 17.3.:
+
+> setring r;                                                                                "
+> def BAS = basering;                                                                       "    ideal J=x,y,z
+> poly a=j[1];                                  // a=-z                                     "                        //a=x
+> ideal aJJ=myquotient(i,a*j,j),i;                                                          "
+> aJJ;                                                                                      "
+aJJ[1]=z                                                                                    aJJ[1]=-x
+aJJ[2]=-y5-x3                                                                               aJJ[2]=-y5-z2
+aJJ[3]=y5+x3+z2                                                                             aJJ[3]=y5+x3+z2
+> aJJ=std(aJJ);                                                                             "
+> aJJ;                                                                                      "
+aJJ[1]=z                                                                                    aJJ[1]=-x
+aJJ[2]=y5+x3                                                                                aJJ[2]=y5+z2
+> ideal aa=a;                                                                               "
+> aa=std(aa);                                                                               "
+> ideal rf = interred(reduce(aJJ,aa));                                                      "
+> rf;                                                                                       "
+rf[1]=y5+x3                                                                                 rf[1]=y5+z2
+> ideal f=j[1],rf;                                                                          "
+> f;                                                                                        "
+f[1]=-z                                                                                     f[1]=x
+f[2]=y5+x3                                                                                  rf[1]=y5+z2
+> int n = size(f);                                                                          "
+> ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;                                       "
+> ideal f=fetch(BAS,f);                                                                     "
+> f;                                                                                        "
+f[1]=-X(3)                                                                                  f[1]=X(1)
+f[2]=X(2)^5+X(1)^3                                                                          f[2]=X(2)^5+X(3)^2
+> ideal i=fetch(BAS,i);                                                                     "
+> i;                                                                                        "
+i[1]=X(2)^5+X(1)^3+X(3)^2                                                                   i[1]=X(2)^5+X(1)^3+X(3)^2
+> ideal Q=i;                                                                                "
+> poly a=fetch(BAS,a);                                                                      "
+> a;                                                                                        "
+-X(3)                                                                                       X(1)
+> ideal af=a*f,i;                                                                           "
+> af;                                                                                       "
+af[1]=X(3)^2                                                                                af[1]=X(1)^2
+af[2]=-X(2)^5*X(3)-X(1)^3*X(3)                                                              af[2]=X(1)*X(2)^5+X(1)*X(3)^2
+af[3]=X(2)^5+X(1)^3+X(3)^2                                                                  af[3]=X(2)^5+X(1)^3+X(3)^2
+> matrix T=matrix(ideal(T(1..n)),1,n);                                                      "
+> T;
+T[1,1]=T(1)
+T[1,2]=T(2)
+> int ii,jj,kk;
+> matrix A;
+> for(ii=2;ii<=n;ii++) {                                                                    "
+			for(jj=2;jj<=ii;jj++) {
+				A=lift(af,f[ii]*f[jj]);
+
+				// lift function is only working up to sign!
+				poly q=0;
+				for(kk=1;kk<=size(af);kk++)
+				{
+					q=q+af[kk]*A[kk,1];
+				}
+				
+				if (q == f[ii]*f[jj])
+				{
+					matrix AA[n][1]=A[1..n,1];
+				}
+				else
+				{
+					matrix AA[n][1]=-A[1..n,1];
+				}
+				Q = Q,ideal(T(ii)*T(jj) - T*AA);
+			}
+		};
+> Q;                                                                                       "
+Q[1]=X(2)^5+X(1)^3+X(3)^2                                                                  Q[1]=X(2)^5+X(1)^3+X(3)^2
+Q[2]=X(2)^5*T(1)+X(1)^3*T(1)+T(2)^2                                                        Q[2]=X(1)*X(2)^5*T(1)+X(1)*X(3)^2*T(1)+T(2)^2
+> ideal fi=f,i;                                                                            "
+> fi;                                                                                      "
+fi[1]=-X(3)                                                                                fi[1]=X(1)
+fi[2]=X(2)^5+X(1)^3                                                                        fi[2]=X(2)^5+X(3)^2
+fi[3]=X(2)^5+X(1)^3+X(3)^2                                                                 fi[3]=X(2)^5+X(1)^3+X(3)^2
+> matrix syzfi=matrix(syz(fi));                                                            "
+> syzfi;                                                                                   "
+syzfi[1,1]=X(3)                                                                            syzfi[1,1]=X(1)^2
+syzfi[1,2]=-X(2)^5-X(1)^3-X(3)^2                                                           syzfi[1,2]=-X(2)^5-X(1)^3-X(3)^2
+syzfi[2,1]=-1                                                                              "         =1
+syzfi[2,2]=0                                                                               "         =0
+syzfi[3,1]=1                                                                               "         =-1
+syzfi[3,2]=-X(3)                                                                           syzfi[3,2]=-X(3)
+> matrix syzfii[n][n]=syzfi[1..n,1..n];                                                    "
+> syzfii;                                                                                  "
+syzfii[1,1]=X(3)                                                                           syzfii[1,1]=X(1)^2
+syzfii[1,2]=-X(2)^5-X(1)^3-X(3)^2                                                          syzfi[1,2]=-X(2)^5-X(1)^3-X(3)^2
+syzfii[2,1]=-1                                                                             "         =1
+syzfii[2,2]=0                                                                              "         =0
+> Q=Q,ideal(T*syzfii);
+> Q;
+Q[1]=X(2)^5+X(1)^3+X(3)^2                                                                  Q[1]=X(2)^5+X(1)^3+X(3)^2
+Q[2]=X(2)^5*T(1)+X(1)^3*T(1)+T(2)^2                                                        Q[2]=X(1)*X(2)^5*T(1)+X(1)*X(3)^2*T(1)+T(2)^2
+Q[3]=X(3)*T(1)-T(2)                                                                        Q[3]=X(1)^2*T(1)+T(2)
+Q[4]=-X(2)^5*T(1)-X(1)^3*T(1)-X(3)^2*T(1)                                                  Q[4]=-X(2)^5*T(1)-X(1)^3*T(1)-X(3)^2*T(1)
+> Q=subst(Q,T(1),1);
+> Q;
+Q[1]=X(2)^5+X(1)^3+X(3)^2                                                                  Q[1]=X(2)^5+X(1)^3+X(3)^2
+Q[2]=X(2)^5+X(1)^3+T(2)^2                                                                  Q[2]=X(1)*X(2)^5+X(1)*X(3)^2+T(2)^2
+Q[3]=X(3)-T(2)                                                                             Q[3]=X(1)^2+T(2)
+Q[4]=-X(2)^5-X(1)^3-X(3)^2                                                                 Q[4]=-X(2)^5-X(1)^3-X(3)^2
+> ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;                                      "
+> ideal homj = imap(newR1,Q);                                                              "
+> homj=std(homj);
+> homj;
+homj[1]=X(3)-T(2)                                                                          homj[1]=X(1)^2+T(2)
+homj[2]=-X(2)^5-X(1)^3-T(2)^2                                                              homj[2]=-X(2)^5-X(3)^2+X(1)*T(2)
+
+

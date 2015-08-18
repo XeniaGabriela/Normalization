@@ -1,0 +1,63 @@
+ 
+Beispiel für Prozedur "myheight(ideal i)":
+
+> ring r=integer,(x,y,z),dp;
+> ideal j=x2,y,z3;
+> j=std(j);
+> proc mydimension(ideal i) {                                     //computes the dimension of an ideal i
+	i=std(i)		;
+	def BAS=basering	;
+	
+	if (charstr(BAS)=="integer")                              //if the ideal is in the polynomial ring over the ring of integers
+	{
+		if (deg(i[1]) == 0)                               //elements of the standardbasis are ordered by increasing degree
+		{                                                 //there is an integer in the ideal i
+			ideal i_ = i[2..size(i)] ;                //remove the integer from std(i)
+			ring r=0,x(1..nvars(BAS)),dp ;            //compute the dimension of the new ideal i over the rationals
+			ideal ii=fetch(BAS,i_)	     ;            //dim(Z[x_1,...,x_n])=n+1 and dim(i_old)=dim(i_new)+1 over Z
+			ii=std(ii)		     ;            //==>dim(i_new) in Q[x_1,...,x_n]=dim(i_old) in Z[x_1,...,x_n]
+			return(dim(ii))		     ;            
+		}                                                 
+	                                                     
+		if (deg(i[size(i)]) == 0)                         //elements of the standardbasis are ordered by decreasing degree
+		{                                                 //there is an integer in the ideal i
+			ideal i_ = i[1..size(i)-1] ;              //remove the integer from std(i)
+			ring r=0,x(1..nvars(BAS)),dp ;            //compute the dimension of the new ideal i over the rationals
+			ideal ii=fetch(BAS,i_)	     ;
+			ii=std(ii)		     ;
+			return(dim(ii))		     ;
+		}
+
+		ring r=0,x(1..nvars(BAS)),dp ;                   //there is no integer in the ideal i
+		ideal ii=fetch(BAS,i)	     ;                   //compute the dimension of the new ideal i over the rationals and add 1
+		ii=std(ii)		     ;                   //because dim Z[x_1,...,x_n]=n+1
+		return(dim(ii)+1)	     ;
+	}
+	else                                                     //if the ideal is in a polynomial ring over a field
+	{                                                        //use the original function "dim(_)"
+		return(dim(i))	;
+	}
+};
+> mydimension(j);
+1
+> ideal i=j,7;
+> mydimension(j);
+1
+> mydimension(i);
+0
+> proc myheight(i) {                                                  //computes the height of an ideal
+	i=std(i)		;
+	if(charstr(basering)=="integer")                            //if the ideal is in the polynomial ring over the ring of integers   
+	{                                                           //then the height of the ideal i ht(i)=n+1-dim(i)
+		return(nvars(basering)+1-mydimension(i));         
+	}                                                       
+	else
+	{
+		return(nvars(basering)-dim(i));                     //if the ideal is in a polynomial ring over a field ht(i)=n-dim(i)
+	}
+};
+> myheight(i);
+4
+> myheight(j);
+3
+> 

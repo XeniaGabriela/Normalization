@@ -1,0 +1,59 @@
+ . . .8 elimvar
+...............
+
+Procedure from library `normalint.lib' (*note normal_lib::).
+
+*Usage:*
+     elimvar (ideal i [, ideal j]); 
+
+
+*Assume:*
+    i = prime ideal over the integers
+    j = maxideal(1) by default, else ideal describing a map
+
+*Compute:*
+    eliminates unnecessary variables from the quotient ring A = basering modulo i
+    such that we get a reduced ring again
+
+*Return:*
+     a list l of four objects
+              l[1] : a polynomial ring, containing two ideals, 'eli' and 'ephi'
+                    such that l[1]/eli is isomorphic to basering /i and
+                    ephi describes the isomorphism map
+              l[2] : "eli"
+              l[3] : "ephi"
+              l[4] : 0, if no variables could be substituted, else 1
+
+
+*Example:*
+        LIB "normalint.lib";
+        ring  r=integer,(x,y,z),dp;
+        ideal i=x3z-y,yz-x4,x-z2,x7-y2;
+        list E=elimvar(i);
+        E;
+        ==> [1]:
+        ==> //   coeff. ring is : Integers
+        ==> //   number of vars : 1
+        ==> //        block   1 : ordering dp
+        ==> //                  : names    z
+        ==> //        block   2 : ordering C
+        ==> [2]:
+        ==>    eli
+        ==> [3]:
+        ==>    ephi
+        ==> [4]:
+               1
+        def newr=E[1];
+        setring newr;
+        eli;
+        ==> eli[1]=0
+        ephi;
+        ==> ephi[1]=z2
+            ephi[2]=z7
+            ephi[3]=z
+
+* Menu:
+
+See also:
+* elimpart::
+* elimlinearpart::

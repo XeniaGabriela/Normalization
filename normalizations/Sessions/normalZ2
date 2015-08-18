@@ -1,0 +1,180 @@
+> ring r=integer,(x,y,z),dp;
+> ideal i=2x;
+> LIB "primdecint.lib";
+// ** loaded /usr/share/Singular/LIB/primdecint.lib (13403,2010-10-06)
+> primdecZ(i);
+[1]:
+   [1]:
+      _[1]=x
+   [2]:
+      _[1]=x
+[2]:
+   [1]:
+      _[1]=2
+   [2]:
+      _[1]=2
+
+> ideal irad=myradical(i);
+> irad;
+irad[1]=-2x
+> size(reduce(irad,std(i)));
+0
+> list L=primdecZ(i);
+> int n=size(L);
+> n;
+2
+> int j;
+> list NL;
+> export(NL);
+// ** `NL` is already global
+> ideal NM(1)=L[1][2];
+> NM(1);
+NM(1)[1]=x
+> deg(NM(1)[1]);
+1
+> NL[1]=mynormal(NM(1));
+> ideal NM(2)=L[2][2];
+> deg(NM(2)[1]);
+0
+> int p = int(NM(2)[1]);
+> p;
+2
+> ring rnew=p,x(1..nvars(r)),dp;
+> rnew;
+//   characteristic : 2
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x(1) x(2) x(3)
+//        block   2 : ordering C
+> ideal NM(2)=fetch(r,NM(2));
+> NM(2);
+NM(2)[1]=0
+> NL[2]=normal(NM(2));
+> NL;
+[1]:
+   [1]:
+      //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+   [2]:
+      nor
+   [3]:
+      normap
+[2]:
+   [1]:
+      [1]:
+         //   characteristic : 2
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x(1) x(2) x(3)
+//        block   2 : ordering C
+   [2]:
+      [1]:
+         _[1]=1
+
+> setring r;
+> i;
+i[1]=2x
+> minAssZ(i);
+[1]:
+   _[1]=x
+[2]:
+   _[1]=2
+
+
+> proc normalZ2(ideal i)
+
+{                                                                          // AM 8.9.GEÄNDERT!
+
+       def BAS=basering;
+
+       ideal irad=myradical(i);
+
+
+
+       if(size(reduce(irad,std(i))) != 0)
+
+       {
+
+           "WARNING! The input is not reduced!";
+
+           "We will continue with the reduced part of input";
+
+            i=irad;
+
+       }
+
+
+
+       list A=minAssZ(i);
+
+       int n=size(A);
+
+       int j;
+
+       list NL;
+
+       for(j=1;j<=n;j++)
+
+       { 
+
+           ideal NM(j)=A[j];
+
+           if (deg(NM(j)[1]) == 0)
+
+           {
+
+              int p = int(NM(j)[1]);
+
+              ring rnew=p,x(1..nvars(BAS)),dp; 
+
+              ideal NM(j) = fetch(BAS,NM(j));
+              list nn = normal(NM(j));
+              def r1 = nn[1][1];
+              setring r1;
+              ideal nor = norid;
+              export(nor);
+
+              NL[j]=r1,"nor","normap";
+
+              setring BAS;
+
+           }
+
+
+
+           else  
+
+           {      
+
+              NL[j] = mynormal(NM(j));
+
+           }
+
+       }
+
+       return(NL);
+
+};
+// ** redefining normalZ2 **
+> normalZ2(i);
+// ** redefining homj
+// ** redefining endphi
+// ** redefining nor
+// ** redefining normap
+[1]:
+   [1]:
+      //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+   [2]:
+      nor
+   [3]:
+      normap
+> i;
+i[1]=2x
+> 

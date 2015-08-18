@@ -1,0 +1,622 @@
+                     SINGULAR                                 /
+ A Computer Algebra System for Polynomial Computations       /   version 3-1-2
+                                                           0<
+ by: W. Decker, G.-M. Greuel, G. Pfister, H. Schoenemann     \   Oct 2010
+FB Mathematik der Universitaet, D-67653 Kaiserslautern        \
+> ring r=integer,(x,y),dp;
+// ** You are using coefficient rings which are not fields.
+// ** Please note that only limited functionality is available
+// ** for these coefficients.
+// ** 
+// ** The following commands are meant to work:
+// ** - basic polynomial arithmetic
+// ** - std
+// ** - syz
+// ** - lift
+// ** - reduce
+> LIB "primdecint.lib";
+// ** loaded /usr/share/Singular/LIB/primdecint.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/crypto.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/poly.lib (12443,2010-01-19)
+// ** loaded /usr/share/Singular/LIB/ring.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/primdec.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/absfact.lib (13534,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/triang.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/matrix.lib (12898,2010-06-23)
+// ** loaded /usr/share/Singular/LIB/nctools.lib (13467,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/random.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/elim.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/inout.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/general.lib (13499,2010-10-15)
+> ideal I=xy4,z2y;
+   ? incompatible type in list assignment
+   ? error occurred in or before STDIN line 3: `ideal I=xy4,z2y;`
+   ? expected ideal-expression. type 'help ideal;'
+> ideal i=x2-y2;
+> pirmdecZ(i);
+   ? `pirmdecZ` is not defined
+   ? error occurred in or before STDIN line 5: `pirmdecZ(i);`
+> primdecZ(i);
+[1]:
+   [1]:
+      _[1]=x-y
+   [2]:
+      _[1]=x-y
+[2]:
+   [1]:
+      _[1]=x+y
+   [2]:
+      _[1]=x+y
+> LIB "all.lib";
+
+proc mydimension(ideal i) {                                       // computes the dimension of an ideal i
+	i=std(i)		;
+	def BAS=basering	;
+	
+	if (charstr(BAS)=="integer")                              // if the ideal is in the polynomial ring over the ring of integers
+	{
+		if (deg(i[1]) == 0)                               // elements of the standardbasis are ordered by increasing degree
+		{                                                 // there is an integer in the ideal i
+			ideal i_ = i[2..size(i)] ;                // remove the integer from std(i)
+			ring r=0,x(1..nvars(BAS)),dp ;            // compute the dimension of the new ideal i over the rationals
+			ideal ii=fetch(BAS,i_)	     ;            // dim(Z[x_1,...,x_n])=n+1 and dim(i_old)=dim(i_new)+1 over Z
+			ii=std(ii)		     ;            // ==>dim(i_new) in Q[x_1,...,x_n]=dim(i_old) in Z[x_1,...,x_n]
+			return(dim(ii))		     ;            
+		}                                                 
+	                                                     
+		if (deg(i[size(i)]) == 0)                         
+		{                                                 // the last generator of i is an integer 
+			ideal i_ = i[1..size(i)-1] ;              // remove the integer from std(i)
+			ring r=0,x(1..nvars(BAS)),dp ;            // compute the dimension of the new ideal i over the rationals
+			ideal ii=fetch(BAS,i_)	     ;
+			ii=std(ii)		     ;
+			return(dim(ii))		     ;
+		}
+
+		ring r=0,x(1..nvars(BAS)),dp ;                   // there is no integer in the ideal i
+		ideal ii=fetch(BAS,i)	     ;                   // compute the dimension of the new ideal i over the rationals and add 1
+		ii=std(ii)		     ;                   // because dim Z[x_1,...,x_n]=n+1
+		return(dim(ii)+1)	     ;
+	}
+	else                                                     // if the ideal is in a polynomial ring over a field
+	{                                                        // use the original function "dim(_)"
+		return(dim(i))	; 
+	}
+}
+
+proc myheight(i) {                                                  // computes the height of an ideal
+	i=std(i)		;
+	if(charstr(basering)=="integer")                            // if the ideal is in the polynomial ring over the ring of integers   
+	{                                                           // then the height of the ideal i ht(i)=n+1-dim(i)
+		return(nvars(basering)+1-mydimension(i));         
+	}                                                       
+	else
+	{
+		return(nvars(basering)-dim(i));                     // if the ideal is in a polynomial ring over a field ht(i)=n-dim(i)
+	}
+}
+
+proc myintersect(ideal i, ideal j) {                                                                                           
+	i=std(i)		;                                                    // computes the intersection of two ideals i and j 
+	j=std(j)		;
+	def BAS = basering;
+	if (charstr(BAS)=="integer")                                                 // if the ideal is in the polynomial ring over the ring of integers 
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";            
+	}
+	else                                                                         // if the ideal is in a polynomial ring over a field
+	{                                                                            // add one new variable "t" to our basering
+		string tempstr="ring r2="+charstr(BAS)+",("+varstr(BAS)+",t),dp;";    
+	}
+	
+	execute(tempstr);                                                            // for i=(f_1,...,f_s) and j=(g_1,...,g_t) compute the ideal
+	ideal J = 0;                                                                 // J=(tf_1,...,tf_s,(1-t)g_1,...,(1-t)g_t)
+	int k;
+	ideal ii=fetch(BAS,i);                                                       // then we eliminate "t" from J and map the new J to our basering
+	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	}
+	ideal jj=fetch(BAS,j);
+	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	}
+	ideal e=eliminate(J,t);
+	setring BAS;
+	return(fetch(r2,e));
+}
+
+proc mysat(ideal i, poly f)                                                  
+{                                                                              // computes the saturation of i over the ring of integers
+	def BAS = basering	;                                              // w.r.t. a poly f by mapping i and f to the polynomial 
+	ring newR = integer,(X(1..nvars(BAS)),T),dp ;                          // ring over the ring of integers plus one new variable T,
+	map psi=BAS,maxideal(1)				 ;                     // compute the ideal Q=(psi(i),1-T*psi(f)), eliminate T  
+	ideal Q=psi(i),1-T*psi(f)			 ;                     // from Q and then mapping it back to the basering.
+	Q=std(Q)					 ;
+	ideal e=eliminate(Q,T)				 ;
+	setring BAS					 ;
+	ideal result=fetch(newR,e)			 ;
+	return(result)					 ;
+}
+
+
+
+
+proc myradical(ideal i) {                                                 
+	i=std(i)		;                                             // computes the radical of a given ideal i
+	def BAS = basering	;
+	if (charstr(BAS)=="integer")                                          // if the ideal is in the polynomial ring over the ring of integers 
+	{                                                                     // set p=product of all variables
+		int j		;                                             // compute the ideal (i,p), eliminate p from i and call the new ideal e
+		poly p = 1	;                                             // if e is the whole ring, then the radical of i is the whole ring
+		for(j = 1;j<=nvars(BAS);j++)                       
+		{
+			p = p*var(j);
+		}
+		ideal e = eliminate(i,p);
+		ideal radi=1;
+		if(e[1]==1 || e[1] == -1)
+		{
+			return(radi) ;
+		}
+		if(e[1]!=0)                                                  
+		{                                                            // if there is an integer k in i, take the primefactors of k  
+			string tempstr="int k="+string(e[1])+";";            // compute the radicals of i in characteristics of all primefactors
+			execute(tempstr);                                    // map it back to the basering and add the primefactor to the ideal
+			list prdiv = primefactors(k)[1];                     // the intersection of them is the radical of i
+			for(j=1; j <= size(prdiv[1]); j++)
+			{
+				ring rj = prdiv[1][j],x(1..nvars(BAS)),dp;
+				ideal radij = radical(fetch(BAS,i));
+				radij = std(radij)		   ;
+				setring BAS;
+				ideal radij2=fetch(rj,radij);
+				radij2=radij2,prdiv[1][j];
+				radij2 = std(radij2)	 ;
+				radi=myintersect(radi,radij2);
+			}
+		}
+		else                                                        
+		{                                                           // if there is no integer in i
+			poly g=1;                                           
+			for(j=1; j<= size(i); j++)                           
+			{                                                   // poly g = (product of the leading coefficients of all generators of i)
+				g = g*leadcoef(i[j]);                   
+			}
+			ideal rig = i,g;                                    // add g to i and compute its radical over the integers
+			rig=myradical(rig);                                 
+			ring rq=0,x(1..nvars(BAS)),dp;
+			ideal riq=radical(fetch(BAS,i));                    // then map it to the polynomial ring over the rationals
+			riq=std(riq)		       ;                    // and compute its radical again
+			ideal B	   ;
+			for(j=1;j<=size(riq);j++)                           // cancel the denominators of its generators
+			{
+				B[j]=cleardenom(riq[j]) ;
+			}                                                   // poly s = (product of the leading coefficients of all these generators)
+			poly s=1 ;                                          // compute the saturation of the radical with cancelled denominators
+			for(j=1;j<=size(B);j++)                             // w.r.t. s in the polynomial ring over the integers
+			{                                                   // the intersection of this saturation and the radical of the ideal (i,g)
+				s=s*leadcoef(B[j]) ;                        // is the radical of the original i
+			}                                                    
+			setring BAS		;
+			ideal riginf=mysat(fetch(rq,B),fetch(rq,s));
+			radi=myintersect(rig,riginf);
+		}
+		return(radi);
+	} else {                                                            // if the ideal is in a polynomial ring over a field
+		return(radical(i));                                         // use the original function "radical(_)"
+	}
+}
+
+proc myquotient(i,j1,j2) {                                                 
+	def BAS=basering;                                                  // computes the quotient (j1:j2) in the the basering modulo the ideal i
+	int j;
+	ideal q=1;                                                        
+	for(j=1; j <= size(j2); j++){                                      // if the ideal j2=(f_1,...,f_s), so for all generators f_i of j2 
+		ideal s=j2[j],-j1,-i;                                      // let ideal s=(f_i,-j1,-i), then compute the matrix m of syzygies of s
+		matrix m=matrix(syz(s));                                   // take the ideal qq generated by the first row of the matrix m                      
+		m=m[1,1..ncols(m)];                                        // the intersection of all those ideals is the quotient
+		matrix n[1][ncols(m)]=m[1,1..ncols(m)];
+		ideal qq=n;
+		q=myintersect(q,qq);
+	}
+	return(std(q));
+}
+
+proc homjj(i,j) {                                                          // computes the endomorphism ring End_R(J)=Hom_R(J,J) in the 
+	def BAS = basering;                                                // basering R modulo the ideal i
+	poly a=j[1];                                                       // a = first generator of the ideal j (might be an integer)
+	ideal aJJ=myquotient(i,a*j,j),i;                                   // compute the ideal aJJ generated by i and the quotient (a*j:j) modulo i
+	aJJ=std(aJJ);
+	ideal aa=a;
+	aa=std(aa);
+	ideal rf = interred(reduce(aJJ,aa));                               // compute the interreduced normalform rf of aJJ w.r.t. aa
+
+	if (size(rf)==0) {                                                 // if aJJ is in aa then the result list is = (basering,ideal i,0)
+		ideal homj=i;
+		export(homj);
+		list result=BAS,"homj",0;
+		return(result);
+	} else {                                                           // if aJJ is not in aa, set the ideal f=(a,rf)
+		ideal f=j[1],rf;
+		int n = size(f);
+
+		ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;        // compute in the ring over the integers in the variables
+                                                                           // of the basering plus new variables T_1,...T_n, where n is the 
+		ideal f=fetch(BAS,f);                                      // size of f
+		ideal i=fetch(BAS,i);
+		ideal Q=i;
+		poly a=fetch(BAS,a);
+		ideal af=a*f,i;                                            // fetch f,i and a to the new ring and set Q=i
+
+		matrix T=matrix(ideal(T(1..n)),1,n);
+		int ii,jj,kk;
+		matrix A;
+		for(ii=2;ii<=n;ii++) {
+			for(jj=2;jj<=ii;jj++) {
+				A=lift(af,f[ii]*f[jj]);                   // for all polynomials f[ii]*f[jj] compute the nx1-transformation matrix A, 
+                                                                          // which expresses f[ii]*f[jj], in terms of the generators of af
+				                                          // lift function is only working up to sign!
+				poly q=0;
+				for(kk=1;kk<=size(af);kk++)
+				{
+					q=q+af[kk]*A[kk,1];
+				}
+				
+				if (q == f[ii]*f[jj])
+				{
+					matrix AA[n][1]=A[1..n,1];
+				}
+				else
+				{
+					matrix AA[n][1]=-A[1..n,1];
+				}
+				Q = Q,ideal(T(ii)*T(jj) - T*AA);
+			}
+		}
+
+		ideal fi=f,i;                                               // compute the nxn-matrix of syzygies of the ideal (f,i)
+		matrix syzfi=matrix(syz(fi));
+		matrix syzfii[n][n]=syzfi[1..n,1..n];
+
+		Q=Q,ideal(T*syzfii);
+		Q=subst(Q,T(1),1);                                          // redefine Q and substitute T(1) by 1 in Q
+
+		ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;         // remove new variable T(1) from the new ring
+
+		ideal homj = imap(newR1,Q);
+		homj=std(homj);
+		export(homj);
+		list result = newR2,"homj",1;
+		return(result);
+	}
+}
+
+
+
+proc testideal(i) {                                                 // computes the testideal for the normalization of a ring r
+	if(i == 0)                                                  
+	{
+		ideal result=1;
+		return(result);
+	}
+	i=std(i)			   ;                        // if i is not the zero ideal
+	ideal j=minor(jacob(i),myheight(i));                        // j=ideal of the n-minors of jacob(i), where n is the height of i
+	ideal tmp=i,j			   ;                        
+	tmp=std(tmp)			   ;                        // result is the radical of the ideal (i,j)
+	ideal result=myradical(tmp);
+	return(result);
+}
+
+proc elimvar(ideal i)                                                         
+{
+	def BAS=basering;
+	int n=size(i);
+	int j;
+	for(j=1;j<=n;j++)                                                      // looking for linear monomials in all generators of i
+	{
+		poly tt=jet(i[j],1)-jet(i[j],0);                               // linear monomials found (the polynomial tt can
+		int pos=0;                                                     // be a sum of several linear monomials)
+		int k;
+		for(k=1;k<=size(tt);k++)
+		{                                                                           
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))  
+			{
+				pos=k;
+			}
+		}
+
+		if (pos > 0)                                                  
+		{
+		poly t=tt[pos];                                               
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+		{
+			poly v=leadcoef(t)*t;                                  
+			int b = 0;
+			int k;
+			poly rest=i[j]-t;                                      // remove t from i[j]                        
+			for(k=1;k<=size(rest);k++)                             // and check for all other terms in i[j] if v divides them
+			{
+				if (reduce(rest[k],v) == 0)
+				{
+					b = 1;
+				}
+			}
+			if (b == 0)                                            // if v divides no other term in i[j] 
+			{
+				if (leadcoef(t) == 1)
+				{
+					poly replace=-(i[j]-t);
+				}
+				else
+				{
+					poly replace=i[j]-t;
+				}
+				ideal QQ = subst(i,v,replace);               // QQ = i with v substituted by the polynomial replace
+				string s=varstr(BAS);
+				string strv = string(v);
+				int p=find(s,strv);                          // p is the position of v in the string of variables
+
+				if (p > 1 && p < size(s))
+				{
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+				}                                             
+
+				if (p == 1)                                          // remove v from the string of variables 
+				{
+					string ns=string(s[2+size(strv)..size(s)]);
+				}
+				
+				if (p+size(strv)-1 == size(s))
+				{
+					string ns=string(s[1..size(s)-size(strv)-1]);
+				}
+				print(strv);
+				print(ns);
+				print(p);
+				print(size(s));
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";  // compute in the ring over the integers with the reduced string of variables
+
+				execute(tmpstr);
+				ideal eli=imap(BAS,QQ);                             // map the ideal QQ to the new ring
+				list result=elimvar(eli);                           
+				result[3]=1;		                            //export(eli);
+				                                                    //list result=newR1,"eli",1;                        
+				setring BAS;
+				return (result);
+			}
+		}
+		}
+	}
+	ideal eli=i;
+	export(eli);
+	list result = BAS,"eli",0;
+	return(result);
+}
+
+proc elimvars(ideal i)                                         
+{
+	def BAS=basering;
+	ideal el=i;
+	int eee = 1;
+	def newR=BAS;
+	while(eee == 1)
+	{
+		list l=elimvar(el);
+		if(l[3] == 0)                                // if every generator of i has been checked for linear terms
+		{                                            // then the result list = (basering,i)
+			eee=0;
+			export(el);
+			list result = newR,"el";
+			setring BAS;
+			return(result);
+		}
+		else                                        // if v divides no other term in i[j] during the algorithm elimvar(i)
+		{                                           // compute with the ideal eli instead of i in the ring newR1 
+			def newR = l[1];                    // from the procedure elimvar(i)
+			setring newR;
+			ideal el=eli;
+		}
+	}
+}
+
+proc mynormal(ideal i)                                      // computes the normalization of a prime ideal i
+{
+	def BAS=basering;
+	ideal j=testideal(i);
+
+	list h=homjj(i,j);                                 //
+
+	if (h[3] == 0)
+	{
+		def newR = h[1];
+		setring newR;
+		ideal nor = homj;
+nor;
+		export(nor);
+		list result = BAS,"nor";
+		setring BAS;
+		return(result);
+	}
+	else
+	{
+		def newR = h[1];
+		setring newR;
+		list e=elimvars(homj);
+		def newR1 = e[1];
+		setring newR1;
+		ideal i=std(el);
+		list result = mynormal(i);
+		setring BAS;
+		return(result);
+	}
+	
+};
+
+// ** loaded /usr/share/Singular/LIB/all.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/qmatrix.lib (13334,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/perron.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/ncdecomp.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/ncalg.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/involut.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/gkdim.lib (12235,2009-11-03)
+// ** loaded /usr/share/Singular/LIB/freegb.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/dmodvar.lib (13492,2010-10-14)
+// ** loaded /usr/share/Singular/LIB/dmodapp.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/dmod.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/central.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/bfun.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/zeroset.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/weierstr.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/tropical.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/toric.lib (12330,2009-11-26)
+// ** loaded /usr/share/Singular/LIB/teachstd.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/surfex.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/surf.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/stratify.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/spectrum.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/spcurve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/solve.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/signcond.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/sing4ti2.lib (13269,2010-09-23)
+// ** loaded /usr/share/Singular/LIB/sing.lib (12394,2010-01-04)
+// ** loaded /usr/share/Singular/LIB/sheafcoh.lib (13328,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/sagbi.lib (13505,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rootsur.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rootsmr.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rinvar.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/reszeta.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/resolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/resgraph.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/resbin.lib $Id: resbin.lib$
+// ** loaded /usr/share/Singular/LIB/reesclos.lib (1.32,2001/01/16)
+// ** loaded /usr/share/Singular/LIB/redcgs.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/realrad.lib (13352,2010-09-30)
+// ** loaded /usr/share/Singular/LIB/qhmoduli.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/primitiv.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/presolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/polymake.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/pointid.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/phindex.lib (12571,2010-03-01)
+// ** loaded /usr/share/Singular/LIB/ntsolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/normaliz.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/normal.lib (13488,2010-10-14)
+// ** loaded /usr/share/Singular/LIB/noether.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/mregular.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/mprimdec.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/monomialideal.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/mondromy.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/modstd.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/makedbm.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/lll.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/linalg.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/latex.lib (13477,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/kskernel.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/jacobson.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/intprog.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/hyperel.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/homolog.lib (12381,2009-12-11)
+// ** loaded /usr/share/Singular/LIB/hnoether.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/grwalk.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/groups.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/graphics.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/gmssing.lib (13548,2010-10-19)
+// ** loaded /usr/share/Singular/LIB/gmspoly.lib (12529,2010-02-08)
+// ** loaded /usr/share/Singular/LIB/finvar.lib (13326,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/equising.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/deform.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/decodegb.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/curvepar.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/control.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/compregb.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/classify.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/cimonom.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/brnoeth.lib (13312,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/atkins.lib (12932,2010-06-30)
+// ** loaded /usr/share/Singular/LIB/assprimeszerodim.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/arcpoint.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/algebra.lib (12436,2010-01-15)
+// ** loaded /usr/share/Singular/LIB/alexpoly.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/aksaka.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/ainvar.lib (13536,2010-10-18)
+. ;
+> 
+proc normalZ(ideal i)
+{
+       primdecZ(i);
+       int nn=size(primdecZ(i));
+       int ij;
+       list NL;
+       for(ij=2;ij<=nn;ij++)
+                {ideal NM(ij)=primdecZ(i)[ij][2]; NL[ij]=mynormal(NM(ij));}
+        return(NL);
+};
+> normalZ(i);
+[1]:
+   [1]:
+      _[1]=x-y
+   [2]:
+      _[1]=x-y
+[2]:
+   [1]:
+      _[1]=x+y
+   [2]:
+      _[1]=x+y
+nor[1]=x+y
+[2]:
+   [1]:
+      //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x y
+//        block   2 : ordering C
+   [2]:
+      nor
+> proc normalZ(ideal i)
+{
+       primdecZ(i);
+       int nn=size(primdecZ(i));
+       int ij;
+       list NL;
+       for(ij=1;ij<=nn;ij++)
+                {ideal NM(ij)=primdecZ(i)[ij][2]; NL[ij]=mynormal(NM(ij));}
+        return(NL);
+};
+// ** redefining normalZ **
+> normalZ(i);
+[1]:
+   [1]:
+      _[1]=x-y
+   [2]:
+      _[1]=x-y
+[2]:
+   [1]:
+      _[1]=x+y
+   [2]:
+      _[1]=x+y
+// ** redefining homj
+nor[1]=x-y
+// ** redefining nor
+// ** redefining homj
+nor[1]=x+y
+// ** redefining nor
+[1]:
+   [1]:
+      //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x y
+//        block   2 : ordering C
+   [2]:
+      nor
+[2]:
+   [1]:
+      //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    x y
+//        block   2 : ordering C
+   [2]:
+      nor
+> 

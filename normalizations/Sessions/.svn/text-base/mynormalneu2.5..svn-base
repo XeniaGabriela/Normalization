@@ -1,0 +1,601 @@
+
+> ring r=integer,(x,y,z),dp;
+
+> LIB "all.lib";
+
+proc mydimension(ideal i) {...}
+
+proc myheight(i) {...}
+
+proc myintersect(ideal i, ideal j) {...}
+
+proc mysat(ideal i, poly f)
+{...}
+
+proc myradical(ideal i) {...}
+
+proc myquotient(i,j1,j2) {...}
+
+proc homjj(i,j) {...}
+
+proc testideal(i) {...}
+
+proc elimvar(ideal i)
+{...}
+
+proc elimvars(ideal i)
+{...}
+
+proc mynormal(ideal i) 
+{...}
+
+proc mynormalneu(ideal i) 
+{
+	def BAS=basering;
+	ideal j=testideal(i);                                           
+        list h=homjj(i,j);
+
+	if (h[3] == 0)
+	{
+		def NewR = h[1];
+		setring NewR;
+		ideal nor = homj;
+		export(nor);
+		list result = BAS,"nor";
+		setring BAS;
+		return(result);
+	}
+	else
+	{
+                def NewR = h[1];
+		setring NewR;
+		list e = elimvars(homj);
+		def NewR1 = e[1];
+		setring NewR1;
+                ideal i = std(el);
+                ideal ii = fetch(BAS,i);
+                ii = std(ii);
+                ideal c1 = interred(reduce(ii,i));
+                ideal c2 = interred(reduce(i,ii));
+
+                if (size(c1)==0 && size(c2)==0)
+                {
+                ideal nor=i;
+                list result = NewR1,"nor";
+                setring BAS;
+                return(result);
+                }
+
+                else
+                {
+		list result = mynormalneu(i);
+		setring BAS;
+                return(result);
+                }
+              
+	}
+	
+};
+
+> ideal i=x2+y2;
+> mynormalneu(i);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> list l=mynormalneu(i);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+> def R1=l[1];
+> setring R1;
+> nor;
+   ? `nor` is undefined
+   ? error occurred in or before STDIN line 1773: `nor;`
+> i;
+   ? `i` is undefined
+   ? error occurred in or before STDIN line 1774: `i;`
+> setring NewR1;
+   ? NewR1 is no name of a ring/qring
+   ? error occurred in or before STDIN line 1775: `setring NewR1;`
+> setring r;
+> i;
+i[1]=x2+y2
+> def BAS=basering;
+> ideal j=testideal(i);
+> j;
+j[1]=-2y
+j[2]=x+y
+> list h=homjj(i,j);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+> h;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 5
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3) T(2) T(3)
+//        block   2 : ordering C
+[2]:
+   homj
+[3]:
+   1
+> def NewR = h[1];
+> setring NewR;
+> list e = elimvars(homj);
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(2) X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   el
+> def newR1 = e[1];
+> setring newR1;
+> el;
+el[1]=0
+el[2]=T(2)^2+1
+el[3]=0
+el[4]=X(2)*T(2)^2+X(2)
+el[5]=-X(2)^2*T(2)^2-X(2)^2
+> ideal i = std(el);
+> i;
+i[1]=T(2)^2+1
+> ideal ii = fetch(BAS,i);
+> ii;
+ii[1]=X(2)^2+X(3)^2
+> ii = std(ii);
+> ideal c1 = interred(reduce(ii,i));
+> c1;
+c1[1]=X(2)^2+X(3)^2
+> ideal c2 = interred(reduce(i,ii));
+> c2;
+c2[1]=T(2)^2+1
+> def BAS=basering;
+// ** redefining BAS **
+> ideal j=testideal(i);
+> j;
+j[1]=-2
+j[2]=T(2)+1
+> list h=homjj(i,j);
+// ** redefining h **
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+> h;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   homj
+[3]:
+   1
+> def NewR = h[1];
+// ** redefining NewR **
+> setring NewR;
+> list e = elimvars(homj);
+// ** redefining e **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   el
+> def NewR1 = e[1];
+> setring NewR1;
+> el;
+el[1]=0
+el[2]=X(3)^2+1
+> ideal i = std(el);
+> i;
+i[1]=X(3)^2+1
+> ideal ii = fetch(BAS,i);
+> ii=std(ii);
+> ii;
+ii[1]=X(3)^2+1
+> ideal c1 = interred(reduce(ii,i));
+> c1;
+c1[1]=0
+> ideal c2 = interred(reduce(i,ii));
+> c2;
+c2[1]=0
+> ideal nor=i;
+> nor;
+nor[1]=X(3)^2+1
+> list result = NewR1,"nor";
+> setring BAS;
+> return(result);
+   ? ...parse error
+   ? error occurred in or before STDIN line 1824: `return(result);`
+> result;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> list L=result;
+> L;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> def RR=L[1];
+> nor;
+   ? `nor` is undefined
+   ? error occurred in or before STDIN line 1829: `nor;`
+> setring NewR1;
+> nor;
+nor[1]=X(3)^2+1
+> proc mynormalneu(ideal i) 
+{
+	def BAS=basering;
+	ideal j=testideal(i);                                           
+        list h=homjj(i,j);
+
+	if (h[3] == 0)
+	{
+		def NewR = h[1];
+		setring NewR;
+		ideal nor = homj;
+		export(nor);
+		list result = BAS,"nor";
+		setring BAS;
+		return(result);
+	}
+	else
+	{
+                def NewR = h[1];
+		setring NewR;
+		list e = elimvars(homj);
+		def NewR1 = e[1];
+		setring NewR1;
+                ideal i = std(el);
+                ideal ii = fetch(BAS,i);
+                ii = std(ii);
+                ideal c1 = interred(reduce(ii,i));
+                ideal c2 = interred(reduce(i,ii));
+
+                if (size(c1)==0 && size(c2)==0)
+                {
+                 h[3]=0;
+                }
+
+                else
+                {
+		list result = mynormalneu(i);
+		setring BAS;
+                return(result);
+                }
+              
+	}
+	
+};
+// ** redefining mynormalneu **
+> setring r;
+> i;
+i[1]=x2+y2
+> mynormalneu(i);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+   ? `_` is undefined
+   ? error occurred in or before ::mynormalneu line 49: `;return();`
+   ? leaving ::mynormalneu
+   skipping text from `;` error at token `)`
+> proc mynormalneu(ideal i) 
+{
+	def BAS=basering;
+	ideal j=testideal(i);                                           
+        list h=homjj(i,j);
+
+	if (h[3] == 0)
+	{
+		def NewR = h[1];
+		setring NewR;
+		ideal nor = homj;
+		export(nor);
+		list result = BAS,"nor";
+		setring BAS;
+		return(result);
+	}
+	else
+	{
+                def NewR = h[1];
+		setring NewR;
+		list e = elimvars(homj);
+		def NewR1 = e[1];
+		setring NewR1;
+                ideal i = std(el);
+                ideal ii = fetch(BAS,i);
+                ii = std(ii);
+                ideal c1 = interred(reduce(ii,i));
+                ideal c2 = interred(reduce(i,ii));
+
+                if (size(c1)==0 && size(c2)==0)
+                {
+                ideal nor=i;
+                export(nor);
+                list result = NewR1,"nor";
+                setring BAS;
+                return(result);
+                }
+
+                else
+                {
+		list result = mynormalneu(i);
+		setring BAS;
+                return(result);
+                }
+              
+	}
+	
+};
+// ** redefining mynormalneu **
+> setring r;
+> i;
+i[1]=x2+y2
+> mynormalneu(i);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> list LL=mynormalneu(i);
+// ** redefining LL **
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining q **
+// ** redefining AA **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining newR **
+// ** redefining l **
+// ** redefining tt **
+// ** redefining pos **
+// ** redefining k **
+// ** redefining k **
+// ** _ is no standard basis
+// ** redefining eli
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+// ** redefining k **
+// ** redefining ns **
+// ** redefining newR **
+// ** redefining l **
+// ** redefining eli
+> l;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> LL;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   nor
+> def R7=LL[1];
+> setring R7;
+> nor;
+nor[1]=X(3)^2+1                                //export(nor); hat gefehlt!
+> exit;
+Auf Wiedersehen.

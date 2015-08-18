@@ -1,0 +1,150 @@
+> proc getGenerators(ideal J, ideal U, poly c)
+{
+//--- Computes the generators of J as an ideal in the original ring,
+//--- where J is given by generators in the new ring.
+//--- The new ring is given by 1/c * U in the total ring of fractions.
+
+  int i, j;                             
+  int dbg = printlevel - voice + 2;     // dbg = printlevel (default: dbg = 0)
+  poly p;                               // The lifted polynomial
+  ideal Jstd = std(J);                  // standard base of J
+
+  if(dbg>1){"Checking for new generators...";}
+  for(i = 1; i <= ncols(J); i++)
+  {
+    for(j = 1; j <= ncols(U); j++)
+    {
+      p = lift(c, J[i]*U[j])[1,1];
+      p = reduce(p, Jstd);
+      if(p != 0)
+      {
+        if(dbg>1)
+        {
+          "New polynomial added:", p;
+          if(dbg>4) {pause();}
+        }
+        Jstd = Jstd, p;
+        Jstd = std(Jstd);
+        J = J, p;
+      }
+    }
+  }
+  return(J);
+};
+> ring r=integer,(x,y,z),dp;
+
+> ideal i=x2-y3;
+> ideal j=testideal(i);
+> j;
+j[1]=-y
+j[2]=-x
+> poly p=j[1];
+> myqoutient(i,p*j,j);
+   ? `myqoutient` is not defined
+   ? error occurred in or before STDIN line 1396: `myqoutient(i,p*j,j);`
+> myquotient(i,p*j,j);
+_[1]=y
+_[2]=-x
+> ring R=0,(x,y,z),dp;
+> ideal i=fetch(r,i);
+> i;
+i[1]=-y3+x2
+> ideal j=testideal(i);
+> j;
+j[1]=y
+j[2]=x
+> qring q=std(i);
+> ideal i=fetch(R,i);
+> i;
+i[1]=-y3+x2
+> ideal j=fetch(R,j);
+> j;
+j[1]=y
+j[2]=x
+> poly p=y;
+> quotient(p*j,j);
+_[1]=y
+_[2]=x
+> poly p=x;
+// ** redefining p **
+> quotient(p*j,j);
+_[1]=x
+_[2]=y2
+> setring r;
+> poly p=x;
+// ** redefining p **
+> myquotient(i,p*j,j);
+_[1]=x
+_[2]=y2
+> ideal U=myquotient(i,p*j,j);
+> U;
+U[1]=x
+U[2]=y2
+> getGenerators(i,U,p);
+   ? 2nd module does not lie in the first
+   ? error occurred in or before ::getGenerators line 16: `      p = lift(c, J[i]*U[j])[1,1];`
+   ? leaving ::getGenerators
+   skipping text from `;` error at token `)`
+> getGenerators(j,U,p);
+   ? 2nd module does not lie in the first
+   ? error occurred in or before ::getGenerators line 16: `      p = lift(c, J[i]*U[j])[1,1];`
+   ? leaving ::getGenerators
+   skipping text from `;` error at token `)`
+> setring R;
+> ideal U=fetch(r,U);
+> U;
+U[1]=x
+U[2]=y2
+> getGenerators(j,U,p);
+   ? `p` is undefined
+   ? error occurred in or before ::getGenerators line 0: `parameter ideal J; parameter  ideal U; parameter  poly c; `
+   ? wrong type declaration. type 'help poly;'
+   ? leaving ::getGenerators
+   skipping text from `;` error at token `)`
+> poly p=x;
+> getGenerators(j,U,p);
+   ? 2nd module does not lie in the first
+   ? error occurred in or before ::getGenerators line 16: `      p = lift(c, J[i]*U[j])[1,1];`
+   ? leaving ::getGenerators
+   skipping text from `;` error at token `)`
+> setring q;
+> p;
+x
+> j;
+j[1]=y
+j[2]=x
+> ideal U=fetch(r,U);
+> U;
+U[1]=x
+U[2]=y2
+> getGenerators(j,U,p);
+_[1]=y
+_[2]=x
+> setring r;
+> i;
+i[1]=-y3+x2
+> qring zq=std(i);
+> ideal i=fetch(r,i);
+> ideal j=fetch(r,j);
+> poly p=fetch(r,p);
+> i;
+i[1]=-y3+x2
+> j;
+j[1]=-y
+j[2]=-x
+> p;
+x
+> getGenerators(j,U,p);
+   ? `U` is undefined
+   ? error occurred in or before ::getGenerators line 0: `parameter ideal J; parameter  ideal U; parameter  poly c; `
+   ? wrong type declaration. type 'help ideal;'
+   ? leaving ::getGenerators
+   skipping text from `;` error at token `)`
+> ideal U=fetch(r,U);
+> U;
+U[1]=x
+U[2]=y2
+> getGenerators(j,U,p);
+_[1]=-y
+_[2]=-x
+> 

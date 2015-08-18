@@ -1,0 +1,35 @@
+
+ . .3 myquotient
+----------------
+
+*Syntax:*
+     `myheight (' ideal_expression`)'
+     
+
+*Type:*
+     ideal
+
+
+*Purpose:*
+     computes the height of an ideal 
+  
+
+
+*Example:*
+          LIB "normalint.lib";
+          ring  r=integer,(x,y,z),dp;
+          ideal i=2x3+5xy,13z4,9x3z;
+          myheight(i);
+          ==> 2
+          ii=i,5;
+          myheight(ii);
+          ==> 3
+          ring R=0,(x,y,z),dp;
+          ideal i=fetch(r,i);
+          myheight(i);
+          ==> 2
+//--- the height of the ideal is the same over a field
+         
+           
+* Menu:
+

@@ -1,0 +1,60 @@
+                     SINGULAR                                 /
+ A Computer Algebra System for Polynomial Computations       /   version 3-1-2
+                                                           0<
+ by: W. Decker, G.-M. Greuel, G. Pfister, H. Schoenemann     \   Oct 2010
+FB Mathematik der Universitaet, D-67653 Kaiserslautern        \
+> ring r=integer,(x,y,z),dp;
+ \\insert neuklinzmann.lib;
+
+> ideal I=xy3,xz2+yz3;
+> ideal J=y,z;
+
+> proc mysats(ideal i1, ideal i2) 
+{       
+        def BAS=basering;
+           
+              
+                   if(charstr(BAS)=="integer")
+                   
+                      {
+                        ring R1 = integer,(X(1..nvars(BAS)),T),dp;
+                        ideal i1=fetch(BAS,i1)                      ;
+                        ideal i2=fetch(BAS,i2)                      ;
+                        int s=size(i2)                              ;
+                        poly f = 0                                  ;
+                        int i                                       ;
+                        for(i=1;i<=s;i++)
+                                    {f= f+(i1[i]*T^i);}
+                         
+                        ring R2 = integer,(X(1..nvars(BAS)),T,Y),dp;
+                        ideal i1=fetch(R1,i1)                      ;
+                        ideal i2=fetch(R1,i2)                      ;
+                        poly f=fetch(R1,f)                         ;
+                        ideal I=i1,Y-f                                ;
+                        ideal SAT=mysat(I,Y)                          ;
+                        ideal e1=eliminate(SAT,Y)                     ;
+
+                        setring R1                                    ;
+                        ideal e1=fetch(R2,e1)                         ;
+                        ideal e2=eliminate(R1,T)                      ;
+                        return(e2)                                    ;
+                      }
+
+                  else
+
+                      {
+                        LIB "elim.lib"          ;
+                        return(sat(i1,i2))      ;
+                       }
+                
+};
+// ** redefining mysats **
+> mysats(I,J);
+   ? eliminate(`ring`,`poly`) failed
+   ? expected eliminate(`ideal`,`poly`)
+   ? expected eliminate(`module`,`poly`)
+   ? error occurred in or before ::mysats line 26: `                        ideal e2=eliminate(R1,T)                      ;`
+   ? expected ideal-expression. type 'help ideal;'
+   ? leaving ::mysats
+   skipping text from `;` error at token `)`
+> 

@@ -1,0 +1,925 @@
+
+> proc elimvar(ideal i)
+
+{
+
+	def BAS=basering;
+
+	int n=size(i);
+
+	int j;
+
+
+
+        if (defined(phi))
+
+        {ideal endphi=phi; kill phi;}
+
+        else
+
+        {ideal endphi=endphi;}
+
+
+
+        poly tt;
+
+        int pos;
+
+        int ss = 1;
+        if (defined(eva) == 0)
+
+        {list eva;}
+
+
+
+	for(j=1;j<=n;j++)
+
+	{                
+
+		// --- Schauen, ob lineare Monome in i[j] existieren
+
+	        tt=jet(i[j],1)-jet(i[j],0);
+
+		  // --- Monome gefunden
+
+		pos=0;
+
+		int k;
+
+		for(k=1;k<=size(tt);k++)
+
+		{
+
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+
+			{
+
+				pos=k;
+
+			}
+
+		}
+
+                kill k;
+
+
+
+            if (pos > 0)
+
+            { 
+
+		poly t=tt[pos];
+
+                kill tt;
+
+                kill pos;
+
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+
+		{
+
+			poly v=leadcoef(t)*t;                        
+
+                        attrib(v,"isSB",1);
+
+			int b = 0;
+
+			int k;
+
+			poly rest=i[j]-t;
+
+
+for(k=1;k<=size(rest);k++)
+{
+if (reduce(rest[k],v) == 0)
+{
+b = 1;
+}
+}
+kill k;
+if (b == 0)
+{
+if (leadcoef(t) == 1)
+{
+poly replace=-(i[j]-t);
+}
+else
+{
+poly replace=i[j]-t;       
+}
+ideal QQ = subst(i,v,replace);
+QQ=simplify(QQ,2);
+ideal phi=subst(endphi,v,replace);
+string s=varstr(BAS);
+string strv(j) = string(v);
+eva[ss]=strv(j);
+ss=ss+1;
+int p=find(s,strv(j));               
+if (p > 1 && p < size(s))
+{
+string ns=string(s[1..p-1])+string(s[p+1+size(strv(j))..size(s)]);
+}
+if (p == 1)
+{
+string ns=string(s[2+size(strv(j))..size(s)]);
+}
+if (p+size(strv(j))-1 == size(s))
+{
+string ns=string(s[1..size(s)-size(strv(j))-1]);
+}
+string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+execute(tmpstr);
+ideal i=imap(BAS,QQ);
+ideal phi=imap(BAS,phi);
+export(phi);
+list result=elimvar(i);
+result[5]=1;				
+setring BAS;
+return (result);
+}
+}
+}
+}
+
+ideal eli=i;
+export(eli);
+ideal ephi=endphi;
+export(ephi);
+list result = BAS,"eli","ephi","eva",0;
+return(result);
+
+};
+// ** redefining elimvar **
+> basering;
+//   coeff. ring is : Integers
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3) T(2)
+//        block   2 : ordering C
+> list e=elimvar(homj);
+// ** redefining e **
+// ** _ is no standard basis
+// ** _ is no standard basis
+// ** `sb` is already global
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   ephi
+[4]:
+   empty list
+[5]:
+   1
+> kill eva;
+   ? `eva` is undefined in kill
+   ? error occurred in or before STDIN line 4409: `kill eva;`
+> list eva;
+> poly v=X(1);
+// ** redefining v **
+> string strv=string(v);
+> int ss=1;
+// ** redefining ss **
+> eva[ss]=strv;
+> eva;
+[1]:
+   X(1)
+> setring re1;
+> eva;
+[1]:
+   X(1)
+> poly v=X(2);
+// ** redefining v **
+> ss=ss+1;
+> ss;
+2
+> string strv=string(v);
+// ** redefining strv **
+> eva[ss]=strv;
+> eva;
+[1]:
+   X(1)
+[2]:
+   X(2)
+> > proc elimvar(ideal i)
+
+{
+
+	def BAS=basering;
+
+	int n=size(i);
+
+	int j;
+
+
+
+        if (defined(phi))
+
+        {ideal endphi=phi; kill phi;}
+
+        else
+
+        {ideal endphi=maxideal(1);}
+
+
+
+        poly tt;
+
+        int pos;
+
+        int ss = 1;
+        if (defined(eva) == 0)
+
+        {list eva;}
+
+
+
+	for(j=1;j<=n;j++)
+
+	{                
+
+		// --- Schauen, ob lineare Monome in i[j] existieren
+
+	        tt=jet(i[j],1)-jet(i[j],0);
+
+		  // --- Monome gefunden
+
+		pos=0;
+
+		int k;
+
+		for(k=1;k<=size(tt);k++)
+
+		{
+
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+
+			{
+
+				pos=k;
+
+			}
+
+		}
+
+                kill k;
+
+
+
+            if (pos > 0)
+
+            { 
+
+		poly t=tt[pos];
+
+                kill tt;
+
+                kill pos;
+
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+
+		{
+
+			poly v=leadcoef(t)*t;                        //---ideal of eliminated vars
+
+                        attrib(v,"isSB",1);
+
+			int b = 0;
+
+			int k;
+
+			poly rest=i[j]-t;
+
+
+
+			for(k=1;k<=size(rest);k++)
+
+			{
+
+				if (reduce(rest[k],v) == 0)
+
+				{
+
+					b = 1;
+
+				}
+
+			}
+
+                        kill k;
+
+			if (b == 0)
+
+			{
+
+				if (leadcoef(t) == 1)
+
+				{
+
+					poly replace=-(i[j]-t);
+
+				}
+
+				else
+
+				{
+
+					poly replace=i[j]-t;       
+
+				}
+
+                                kill j;
+
+                                ideal QQ = subst(i,v,replace);
+
+                                QQ=simplify(QQ,2);
+
+                                ideal phi=subst(endphi,v,replace);
+
+                                string s=varstr(BAS);
+
+				string strv = string(v);
+                                eva[ss]=strv;
+                                ss=ss+1;
+
+				int p=find(s,strv);               
+
+
+
+				if (p > 1 && p < size(s))
+
+				{
+
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+
+				}
+
+
+
+				if (p == 1)
+
+				{
+
+					string ns=string(s[2+size(strv)..size(s)]);
+
+				}
+
+				
+
+				if (p+size(strv)-1 == size(s))
+
+				{
+
+					string ns=string(s[1..size(s)-size(strv)-1]);
+
+				}
+
+				
+
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+
+
+
+				execute(tmpstr);
+
+				ideal i=imap(BAS,QQ);
+
+                                ideal phi=imap(BAS,phi);
+
+                                export(phi);
+
+				list result=elimvar(i);
+
+				result[5]=1;				
+
+			        setring BAS;
+
+				return (result);
+
+			}
+
+		}
+
+            }
+
+	}
+
+	ideal eli=i;
+
+	export(eli);
+
+        ideal ephi=endphi;
+
+        export(ephi);
+        export(eva);
+
+	list result = BAS,"eli","ephi","eva",0;
+
+	return(result);
+
+};
+   ? error occurred in or before STDIN line 4424: `> proc elimvar(ideal i)`
+   skipping text from `i`. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+> proc elimvar(ideal i)
+
+{
+
+	def BAS=basering;
+
+	int n=size(i);
+
+	int j;
+
+
+
+        if (defined(phi))
+
+        {ideal endphi=phi; kill phi;}
+
+        else
+
+        {ideal endphi=maxideal(1);}
+
+
+
+        poly tt;
+
+        int pos;
+
+        int ss = 1;
+        if (defined(eva) == 0)
+
+        {list eva;}
+
+
+
+	for(j=1;j<=n;j++)
+
+	{                
+
+		// --- Schauen, ob lineare Monome in i[j] existieren
+
+	        tt=jet(i[j],1)-jet(i[j],0);
+
+		  // --- Monome gefunden
+
+		pos=0;
+
+		int k;
+
+		for(k=1;k<=size(tt);k++)
+
+		{
+
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+
+			{
+
+				pos=k;
+
+			}
+
+		}
+
+                kill k;
+
+
+
+            if (pos > 0)
+
+            { 
+
+		poly t=tt[pos];
+
+                kill tt;
+
+                kill pos;
+
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+
+		{
+
+			poly v=leadcoef(t)*t;                        //---ideal of eliminated vars
+
+                        attrib(v,"isSB",1);
+
+			int b = 0;
+
+			int k;
+
+			poly rest=i[j]-t;
+
+
+
+			for(k=1;k<=size(rest);k++)
+
+			{
+
+				if (reduce(rest[k],v) == 0)
+
+				{
+
+					b = 1;
+
+				}
+
+			}
+
+                        kill k;
+
+			if (b == 0)
+
+			{
+
+				if (leadcoef(t) == 1)
+
+				{
+
+					poly replace=-(i[j]-t);
+
+				}
+
+				else
+
+				{
+
+					poly replace=i[j]-t;       
+
+				}
+
+                                kill j;
+
+                                ideal QQ = subst(i,v,replace);
+
+                                QQ=simplify(QQ,2);
+
+                                ideal phi=subst(endphi,v,replace);
+
+                                string s=varstr(BAS);
+
+				string strv = string(v);
+                                eva[ss]=strv;
+                                ss=ss+1;
+
+				int p=find(s,strv);               
+
+
+
+				if (p > 1 && p < size(s))
+
+				{
+
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+
+				}
+
+
+
+				if (p == 1)
+
+				{
+
+					string ns=string(s[2+size(strv)..size(s)]);
+
+				}
+
+				
+
+				if (p+size(strv)-1 == size(s))
+
+				{
+
+					string ns=string(s[1..size(s)-size(strv)-1]);
+
+				}
+
+				
+
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+
+
+
+				execute(tmpstr);
+
+				ideal i=imap(BAS,QQ);
+
+                                ideal phi=imap(BAS,phi);
+
+                                export(phi);
+
+				list result=elimvar(i);
+
+				result[5]=1;				
+
+			        setring BAS;
+
+				return (result);
+
+			}
+
+		}
+
+            }
+
+	}
+
+	ideal eli=i;
+
+	export(eli);
+
+        ideal ephi=endphi;
+
+        export(ephi);
+        export(eva);
+
+	list result = BAS,"eli","ephi","eva",0;
+
+	return(result);
+
+};
+// ** redefining elimvar **
+> basering;
+//   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(2) X(3) T(2)
+//        block   2 : ordering C
+> setring r1;
+> list e=elimvar(homj);
+// ** redefining e **
+// ** _ is no standard basis
+// ** _ is no standard basis
+// ** `eva` is already global
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   ephi
+[4]:
+   eva
+[5]:
+   1
+> eva;
+[1]:
+   X(2)
+[2]:
+   X(2)
+> proc elimvar(ideal i)
+
+{
+
+	def BAS=basering;
+
+	int n=size(i);
+
+	int j;
+
+
+
+        if (defined(phi))
+
+        {ideal endphi=phi; kill phi;}
+
+        else
+
+        {ideal endphi=maxideal(1);}
+
+
+
+        poly tt;
+
+        int pos;
+
+        int ss = 0;
+
+        if (defined(eva) == 0)
+
+        {list eva;}
+
+
+
+	for(j=1;j<=n;j++)
+
+	{                
+
+		// --- Schauen, ob lineare Monome in i[j] existieren
+
+	        tt=jet(i[j],1)-jet(i[j],0);
+
+		  // --- Monome gefunden
+
+		pos=0;
+
+		int k;
+
+		for(k=1;k<=size(tt);k++)
+
+		{
+
+			if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+
+			{
+
+				pos=k;
+
+			}
+
+		}
+
+                kill k;
+
+
+
+            if (pos > 0)
+
+            { 
+
+		poly t=tt[pos];
+
+                kill tt;
+
+                kill pos;
+
+		if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+
+		{
+
+			poly v=leadcoef(t)*t;                       //---ideal of eliminated vars
+
+                        attrib(v,"isSB",1);
+
+			int b = 0;
+
+			int k;
+
+			poly rest=i[j]-t;
+
+
+
+			for(k=1;k<=size(rest);k++)
+
+			{
+
+				if (reduce(rest[k],v) == 0)
+
+				{
+
+					b = 1;
+
+				}
+
+			}
+
+                        kill k;
+
+			if (b == 0)
+
+			{
+
+				if (leadcoef(t) == 1)
+
+				{
+
+					poly replace=-(i[j]-t);
+
+				}
+
+				else
+
+				{
+
+					poly replace=i[j]-t;       
+
+				}
+
+                                kill j;
+
+                                ideal QQ = subst(i,v,replace);
+
+                                QQ=simplify(QQ,2);
+
+                                ideal phi=subst(endphi,v,replace);
+
+                                string s=varstr(BAS);
+
+				string strv = string(v);
+                                ss=ss+1;
+                                eva[ss]=strv;
+
+				int p=find(s,strv);               
+
+
+
+				if (p > 1 && p < size(s))
+
+				{
+
+					string ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+
+				}
+
+
+
+				if (p == 1)
+
+				{
+
+					string ns=string(s[2+size(strv)..size(s)]);
+
+				}
+
+				
+
+				if (p+size(strv)-1 == size(s))
+
+				{
+
+					string ns=string(s[1..size(s)-size(strv)-1]);
+
+				}
+
+				
+
+				string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+
+
+
+				execute(tmpstr);
+
+                                ideal i=imap(BAS,QQ);
+
+                                ideal phi=imap(BAS,phi);
+
+                                export(phi);
+
+				list result=elimvar(i);
+
+				result[5]=1;				
+
+			        setring BAS;
+
+				return (result);
+
+			}
+
+		}
+
+            }
+
+	}
+
+	ideal eli=i;
+
+	export(eli);
+
+        ideal ephi=endphi;
+
+        export(ephi);
+
+        export(eva);
+
+	list result = BAS,"eli","ephi","eva",0;
+
+	return(result);
+
+};
+// ** redefining elimvar **
+> setring r1;
+> list e=elimvar(homj);
+// ** redefining e **
+// ** _ is no standard basis
+// ** _ is no standard basis
+// ** `eva` is already global
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   ephi
+[4]:
+   eva
+[5]:
+   1
+> eva;
+[1]:
+   X(2)
+[2]:
+   X(2)
+> exit;
+Auf Wiedersehen.

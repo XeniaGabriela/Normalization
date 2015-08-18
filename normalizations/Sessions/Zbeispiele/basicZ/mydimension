@@ -1,0 +1,53 @@
+
+Beispiel für die Prozedur "mydimension(ideal i)":
+
+> ring r=integer,(x,y,z),dp;
+
+> ideal j=x2,y,z3;
+> j=std(j);
+> j;
+j[1]=y
+j[2]=x2
+j[3]=z3
+> ideal i=j,7;
+> i=std(i);
+> i;
+i[1]=7
+i[2]=y
+i[3]=x2
+i[4]=z3
+> deg(i[1]);
+0
+> ideal i_ = i[2..size(i)] ; 
+> i_;
+i_[1]=y
+i_[2]=x2
+i_[3]=z3
+> ring R=0,(x,y,z),dp;
+> ideal ii=fetch(r,i_);
+> ii;
+ii[1]=y
+ii[2]=x2
+ii[3]=z3
+> ii=std(ii);
+> dim(ii);
+0
+> mydimension(i);
+0                              //mydimension(i)=dim(ii)
+                            
+setring r;
+>deg(j[1]);
+1
+>deg(j[size(j)]);
+3
+setring R;
+> fetch(r,j);
+_[1]=y
+_[2]=x2
+_[3]=z3
+> ideal jj=fetch(r,j);
+> jj=std(jj);
+> dim(jj);
+0
+> mydimension(j);              
+1                             //mydimension(j)=dim(jj)+1

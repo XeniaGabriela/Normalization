@@ -1,0 +1,76 @@
+
+ . . .6 homjj
+..............
+
+Procedure from library `normalint.lib' (*note normal_lib::).
+
+*Usage:*
+     homjj (ideal i, ideal j); 
+
+
+*Assume:*
+    i = prime ideal over the integers
+    j = testideal(i)
+
+*Compute:*
+     Endomorphism ring End_R(j)=Hom_R(j,j) with its ring structure as
+     affine ring, together with the map R -> Hom_R(J,J) of affine rings,
+     where R is the quotient ring of the basering modulo the standard basis std(i).
+
+*Return:*
+     a list l of four objects
+              l[1] : a polynomial ring, containing two ideals, 'homj' and 'endphi'
+                    such that l[1]/homj = Hom_R(j,j) and
+                    endphi describes the canonical map R -> Hom_R(j,j)
+              l[2] : "homj"
+              l[3] : "endphi"
+              l[4] : 0, if R = Hom_R(j,j), else 1
+
+*Note_*
+     printlevel >=1: display comments (default: printlevel=0)
+
+*Example:*
+     LIB "normalint.lib";
+     ring  r = integer,(u,v),dp;
+     ideal i = u3-v2;
+     ideal j = testideal(i);
+     j;
+     ==> j[1]=v
+     ==> j[2]=u
+     list h = homjj(i,j);
+     h;
+     ==> [1]:
+     ==> //   coeff. ring is : Integers
+     ==> //   number of vars : 3
+     ==> //        block   1 : ordering dp
+     ==> //                  : names    X(1) X(2) T(2)
+     ==> //        block   2 : ordering C
+     ==> [2]:
+     ==> homj
+     ==> [3]:
+     ==> endphi
+     ==> [4]:
+     ==> 1
+     def r1 = h[1];
+     setring r1;
+     homj;
+     ==> homj[1]=T(2)^2-X(1)
+     ==> homj[2]=X(1)*T(2)-X(2)
+     ==> homj[3]=-X(1)^2+X(2)*T(2)
+     ==> homj[4]=X(1)^3-X(2)^2
+     endphi;
+     ==> endphi[1]=X(1)
+     ==> endphi[2]=X(2)
+//--- eliminate needless variables:
+     list e = elimvar(homj,endphi);
+     def r2 = e[1];
+     setring r2;
+     eli;
+     ==> eli[1]=0
+     ephi;
+     ==> ephi[1]=T(2)^2
+     ==> ephi[2]=T(2)^3
+
+
+* Menu:
+     

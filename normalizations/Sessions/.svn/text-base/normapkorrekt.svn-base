@@ -1,0 +1,209 @@
+> ring r=0,(x,y,z),dp;
+> LIB "all.lib";
+> ideal i=x3-y2;
+> list n=normalC(i);                            //--- mit normalC
+> def R1=n[1][1];
+> setring R1;
+> norid;
+norid[1]=0
+> normap;
+normap[1]=T(2)^2
+normap[2]=T(2)^3
+normap[3]=T(1)
+> R1;
+//   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> setring r;
+
+> list nn=normal(i);                            //--- mit normal
+> def R2=nn[1][1];
+> setring R2;
+> norid;
+norid[1]=T(1)*x-y
+norid[2]=-T(1)*y+x^2
+norid[3]=T(1)^2-x
+norid[4]=x^3-y^2
+> normap;
+normap[1]=x
+normap[2]=y
+normap[3]=z
+> intvec rw;                                   //--- irredundante Variabeln eliminieren mit substpart
+> int homo=homog(norid);
+> homo;
+0
+> list L=substpart(norid,normap,homo,rw);
+> L;
+[1]:
+   //   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> def R3=L[1];
+> setring R3;
+> endid;
+endid[1]=0
+> endphi;
+endphi[1]=T(1)^2                              //--- = normap
+endphi[2]=T(1)^3
+endphi[3]=T(2)
+> setring R2;
+> homo;
+0
+> rw;
+0
+> def newRing = basering;                     //--- substpart Schritt für Schritt
+> int ii,jj;
+> map phi = newRing,maxideal(1); 
+> list Le = elimpart(norid);
+> Le;
+[1]:
+   _[1]=0                                    //--- neues Ideal
+[2]:
+   _[1]=x                                    //--- eliminierte Variabeln
+   _[2]=y
+[3]:
+   _[1]=-T(1)^2+x                            //--- Substitution der 1. Variablen 
+   _[2]=-T(1)^3+y                            //--- Substitution der 2. Variablen
+[4]:
+   _[1]=T(1)                                 //--- verbleibende Variablen
+   _[2]=0
+   _[3]=0
+   _[4]=z
+[5]:
+   _[1]=T(1)                                 //--- Abbildungsideal
+   _[2]=T(1)^2
+   _[3]=T(1)^3
+   _[4]=z
+> R2;
+//   characteristic : 0
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    T(1)
+//        block   2 : ordering dp
+//                  : names    x y z
+//        block   3 : ordering C
+> int q = size(Le[2]); 
+> q;
+2
+> intvec rw1 = 0;
+> rw1[nvars(basering)] = 0;
+> rw1;
+0,0,0,0
+> rw1 = rw1+1;
+> rw1;
+1,1,1,1
+> norid=Le[1];
+> map ps = newRing,Le[5];
+> phi = ps(phi);
+> phi;
+phi[1]=T(1)
+phi[2]=T(1)^2
+phi[3]=T(1)^3
+phi[4]=z
+> phi=phi(phi);
+> phi;
+phi[1]=T(1)
+phi[2]=T(1)^2
+phi[3]=T(1)^3
+phi[4]=z
+> phi=phi(phi);
+> phi;
+phi[1]=T(1)
+phi[2]=T(1)^2
+phi[3]=T(1)^3
+phi[4]=z
+> 
+      for( ii=1; ii<=size(rw1); ii++ )
+      {
+         if( Le[4][ii]==0 )        //ii = index of var which was substituted
+         {
+            rw1[ii]=0;             //substituted vars have entry 0 in rw1
+         }
+      }
+> rw1;
+1,0,0,1
+> Le=elimpart(norid);
+> Le;
+[1]:
+   _[1]=0
+[2]:
+   _[1]=0
+[3]:
+   _[1]=0
+[4]:
+   _[1]=T(1)
+   _[2]=x
+   _[3]=y
+   _[4]=z
+[5]:
+   _[1]=T(1)
+   _[2]=x
+   _[3]=y
+   _[4]=z
+> size(Le[2]);
+0
+> q = q + size(Le[2]);
+> q;
+2
+> normap;
+normap[1]=x
+normap[2]=y
+normap[3]=z
+>  normap = phi(normap);
+> normap;
+normap[1]=T(1)^2
+normap[2]=T(1)^3
+normap[3]=z
+> nvars(newRing);
+4
+> homo;
+0
+> ring lastRing = char(basering),(T(1..nvars(newRing)-q)),dp;
+> lastRing;
+//   characteristic : 0
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering C
+> ideal lastmap;
+> jj = 1;
+> rw1[1];
+1
+> lastmap[1] = T(1);
+> jj=jj+1;
+> jj;
+2
+> rw1[2];
+0
+> lastmap[2]=0;
+> rw1[3];
+0
+> lastmap[3]=0;
+> rw1[4];
+1
+> lastmap[4]=T(jj);
+> lastmap;
+lastmap[1]=T(1)
+lastmap[2]=0
+lastmap[3]=0
+lastmap[4]=T(2)
+> map phi1 = newRing,lastmap;
+> phi1;
+phi1[1]=T(1)
+phi1[2]=0
+phi1[3]=0
+phi1[4]=T(2)
+> ideal norid=phi1(norid);
+> norid;
+norid[1]=0
+> ideal normap=phi1(normap);
+> normap;
+normap[1]=T(1)^2
+normap[2]=T(1)^3
+normap[3]=T(2)
+> exit;
+Auf Wiedersehen.

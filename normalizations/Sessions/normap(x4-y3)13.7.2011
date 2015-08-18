@@ -1,0 +1,105 @@
+> ring r=0,(x,y),dp;                                                   // x4-y3 über Q
+> LIB "normal.lib";
+
+> ideal i=x4-y3;
+> list l=normal(i);
+> l;
+[1]:
+   [1]:
+      //   characteristic : 0
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    T(1) T(2)
+//        block   2 : ordering dp
+//                  : names    x y
+//        block   3 : ordering C
+[2]:
+   [1]:
+      _[1]=x2y
+      _[2]=x3
+      _[3]=y2
+> def r1=l[1][1];
+> setring r1;
+> norid;
+norid[1]=T(1)*x-T(2)*y
+norid[2]=T(2)*x-y
+norid[3]=-T(1)*y+x^2
+norid[4]=T(1)^2-y
+norid[5]=T(1)*T(2)-x
+norid[6]=T(2)^2-T(1)
+norid[7]=x^4-y^3
+> list e=elimvar(norid);
+> e;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    T(2)
+//        block   2 : ordering C
+[2]:
+   eli
+[3]:
+   ephi
+[4]:
+   1
+> def r2=e[1];
+> setring r2;
+> eli;
+eli[1]=0
+> ephi;
+ephi[1]=T(2)^2
+ephi[2]=T(2)
+ephi[3]=T(2)^3
+ephi[4]=T(2)^4
+
+NUN ÜBER Z:
+
+> ring Rint=integer,(x,y),dp;                                           // x4-y3 über Z
+> ideal i=x4-y3;
+> list l=mynormal(i);
+> l;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    X(1)
+//        block   2 : ordering C
+[2]:
+   nor
+[3]:
+   normap
+> def r3=l[1];
+> setring r3;
+> nor;
+nor[1]=X(1)^2-1
+> normap;
+normap[1]=X(1)
+normap[2]=0
+normap[3]=0
+
+VERGLEICH X3-Y2:
+
+> setring Rint;                                                         // x3-y2 über Z
+> ideal j=x3-y2;
+> list l=mynormal(j);
+> l;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 1
+//        block   1 : ordering dp
+//                  : names    T(2)
+//        block   2 : ordering C
+[2]:
+   nor
+[3]:
+   normap
+> def r4=l[1];
+// ** redefining r4 **
+> setring r4;
+> nor;
+nor[1]=0
+> normap;
+normap[1]=T(2)^2
+normap[2]=T(2)^3
+normap[3]=T(2)
+

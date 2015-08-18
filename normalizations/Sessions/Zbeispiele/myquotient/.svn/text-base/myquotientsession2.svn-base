@@ -1,0 +1,327 @@
+   
+Beispiel für Prozedur "myquotient(ideal i, ideal j1, ideal j2)":
+
+> ring r=integer,(x,y,z),dp;
+> proc myquotient(i,j1,j2) {                                                 
+	def BAS=basering;                                                  // computes the quotient (j1:j2) in the the basering modulo the ideal i
+	int j;
+	ideal q=1;                                                        
+	for(j=1; j <= size(j2); j++){                                      
+
+		ideal s=j2[j],-j1,-i;                                      
+		matrix m=matrix(syz(s));                                                       
+		m=m[1,1..ncols(m)];                                        
+		matrix n[1][ncols(m)]=m[1,1..ncols(m)];
+		ideal qq=n;
+		q=intersect(q,qq);
+	}
+	return(std(q));
+};
+
+> ideal j1=4x3y,12z;
+> ideal j2=x,z;
+> ideal i=0;
+> myquotient(i,j1,j2);
+_[1]=12z
+_[2]=12x2y
+_[3]=4x3y
+
+> ideal j2=4,x,z;
+> myquotient(i,j1,j2);
+_[1]=12z
+_[2]=4x3y
+
+Schritt für Schritt mit "myintersect":
+
+>  proc myintersect(ideal i, ideal j) {                                                                                           
+	i=std(i)		;                                                    // computes the intersection of two ideals i and j 
+	j=std(j)		;
+	def BAS = basering;
+	if (charstr(BAS)=="integer")                                                 
+	{                                                                            
+		string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";            
+	}
+	else                                                                         
+	{                                                                            
+		string tempstr="ring r2="+charstr(BAS)+",("+varstr(BAS)+",t),dp;";    
+	}
+	
+	execute(tempstr);                                                            
+	ideal J = 0;                                                                 
+	int k;
+	ideal ii=fetch(BAS,i);                                                       
+	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	}
+	ideal jj=fetch(BAS,j);
+	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	}
+	ideal e=eliminate(J,t);
+	setring BAS;
+	return(fetch(r2,e));
+};
+> proc myquotient(i,j1,j2) {                                                 
+	def BAS=basering;                                                  // computes the quotient (j1:j2) in the the basering modulo the ideal i
+	int j;
+	ideal q=1;                                                        
+	for(j=1; j <= size(j2); j++){                                      
+		ideal s=j2[j],-j1,-i;                                      
+		matrix m=matrix(syz(s));                                                     
+		m=m[1,1..ncols(m)];                                        
+		matrix n[1][ncols(m)]=m[1,1..ncols(m)];
+		ideal qq=n;
+		q=myintersect(q,qq);
+	}
+	return(std(q));
+};
+> ideal j1=4x3y,12z;
+> ideal j2=x;
+> ideal i=0;
+> myquotient(i,j1,j2);
+_[1]=-12z
+_[2]=4x2y
+> ideal I=myquotient(i,j1,j2);
+> I;
+I[1]=-12z
+I[2]=4x2y
+> j2=z;
+> ideal J=myquotient(i,j1,j2);
+> J;
+J[1]=12
+J[2]=4x3y
+> intersect(I,J);
+_[1]=4x3y
+_[2]=12z
+_[3]=-12x2y
+> ideal j2=x,z;
+> myquotient(i,j1,j2);
+_[1]=-12z
+_[2]=12x2y
+_[3]=4x3y
+> ideal j2=4;
+> myquotient(i,j1,j2);
+_[1]=3z
+_[2]=x3y
+> ideal I=3z,x3y;
+// ** redefining I **
+> ideal J=12z,12x2y,4x3y;
+// ** redefining J **
+> myintersect(I,J);
+_[1]=-12z
+_[2]=-4x3y
+> j2=4,x,z;
+> myquotient(i,j1,j2);
+_[1]=12z
+_[2]=4x3y
+
+Schritt für Schritt mit neuem j1:
+
+> ideal j1=4x,12z;
+> ideal j2=4;
+> myquotient(i,j1,j2);
+_[1]=3z
+_[2]=x
+> ideal j2=4,x;
+> myquotient(i,j1,j2);
+_[1]=12z
+_[2]=4x
+> ideal j2=x;
+> myquotient(i,j1,j2);
+_[1]=4
+> ideal j2=z;
+> myquotient(i,j1,j2);
+_[1]=12
+_[2]=4x
+> ideal i=x;
+> myquotient(i,j1,j2);
+_[1]=12
+_[2]=x                            // x=4x=0 in r/i
+> i;
+i[1]=x
+> j1;
+j1[1]=4x
+j1[2]=12z
+> j2;
+j2[1]=z
+> intersect(6,8);
+_[1]=24
+> myintersect(6,8);
+_[1]=-24
+
+11.3. NEUE SESSION:
+
+
+> ideal i=x6-yzx,y12z5+8x-y;
+> vdim(i);
+// ** i is no standard basis
+-1
+> dim(i);
+// ** i is no standard basis
+1
+> attrib(i,"isSB",1);
+> vdim(i);
+-1
+> mydimension(i);
+2
+> myheight(i);
+2
+> ideal j1=4x,12z;
+> ideal j2=4,x;
+> ideal i=0;
+// ** redefining i **
+> myquotient(i,j1,j2);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+_[1]=12z
+_[2]=4x
+> quotient(j1,j2);
+_[1]=12z
+_[2]=4x
+> ideal i=x;
+// ** redefining i **
+> myquotient(i,j1,j2);
+// ** redefining s **
+// ** redefining m **
+// ** redefining n **
+// ** redefining qq **
+_[1]=-3z                                        \\ (j1:j2[2])=(4x,12z:x)=(12z:0)=r/i in r/i  !!!
+_[2]=-x
+> intersect(3z,12z);
+_[1]=12z
+> proc myintersect(ideal i, ideal j) {
+	i=std(i)		;
+	j=std(j)		;
+	def BAS = basering;
+	if (charstr(BAS)=="integer")
+	{
+		string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";
+	}
+	else
+	{
+		string tempstr="ring r2="+charstr(BAS)+",("varstr(BAS)+",t),dp;";
+	}
+	
+	execute(tempstr);
+	ideal J = 0;
+	int k;
+	ideal ii=fetch(BAS,i);
+	for(k=1; k <= size(ii); k++)
+	{
+		J=J,t*ii[k];
+	}
+	ideal jj=fetch(BAS,j);
+	for(k=1; k <= size(jj); k++)
+	{
+		J=J,(1-t)*jj[k];
+	}
+	ideal e=eliminate(J,t);
+	setring BAS;
+	return(fetch(r2,e));
+};
+> myintersect(3z,12z);
+_[1]=-12z
+> i=std(i)		;
+> i;
+i[1]=x
+> int j;
+> ideal q=1;
+> ideal s=j2[1],-j1,-i;
+> s;
+s[1]=4
+s[2]=-4x
+s[3]=-12z
+s[4]=-x
+> matrix m=matrix(syz(s));
+> m;
+m[1,1]=0
+m[1,2]=3z
+m[1,3]=x
+m[2,1]=1
+m[2,2]=0
+m[2,3]=0
+m[3,1]=0
+m[3,2]=1
+m[3,3]=0
+m[4,1]=-4
+m[4,2]=0
+m[4,3]=4
+> m=m[1,1..ncols(m)];
+> m;
+m[1,1]=0
+m[1,2]=3z
+m[1,3]=x
+m[2,1]=0
+m[2,2]=0
+m[2,3]=0
+m[3,1]=0
+m[3,2]=0
+m[3,3]=0
+m[4,1]=0
+m[4,2]=0
+m[4,3]=0
+> matrix n[1][ncols(m)]=m[1,1..ncols(m)];
+> n;
+n[1,1]=0
+n[1,2]=3z
+n[1,3]=x
+> ideal qq=n;
+> qq;
+qq[1]=0
+qq[2]=3z
+qq[3]=x
+> q=intersect(q,qq);
+> q;
+q[1]=-3z
+q[2]=-x
+> ideal s=j2[2],-j1,-i;
+// ** redefining s **
+> s;
+s[1]=x
+s[2]=-4x
+s[3]=-12z
+s[4]=-x
+> matrix m=matrix(syz(s));
+// ** redefining m **
+> m;
+m[1,1]=-1
+m[1,2]=-12z
+m[2,1]=0
+m[2,2]=0
+m[3,1]=0
+m[3,2]=-x
+m[4,1]=-1
+m[4,2]=0
+> m=m[1,1..ncols(m)];
+> m;
+m[1,1]=-1
+m[1,2]=-12z
+m[2,1]=0
+m[2,2]=0
+m[3,1]=0
+m[3,2]=0
+m[4,1]=0
+m[4,2]=0
+> matrix n[1][ncols(m)]=m[1,1..ncols(m)];
+// ** redefining n **
+> n;
+n[1,1]=-1
+n[1,2]=-12z
+> ideal qq=n;
+// ** redefining qq **
+> qq;
+qq[1]=-1
+qq[2]=-12z
+> q=intersect(q,qq);
+> q;
+q[1]=12z
+q[2]=-3z
+q[3]=-x
+> std(q);
+_[1]=-3z
+_[2]=-x
+> 

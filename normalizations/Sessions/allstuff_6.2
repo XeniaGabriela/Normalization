@@ -1,0 +1,2534 @@
+                     SINGULAR                                 /
+ A Computer Algebra System for Polynomial Computations       /   version 3-1-2
+                                                           0<
+ by: W. Decker, G.-M. Greuel, G. Pfister, H. Schoenemann     \   Oct 2010
+FB Mathematik der Universitaet, D-67653 Kaiserslautern        \
+> LIB "all.lib";
+LIB "primdecint.lib";
+
+proc normalizeZ(ideal I)
+{
+//=== if I[1]=q in Z, it replaces all other coeffs of polys in I by there value
+//=== mod q, std should do this automatically and then this procedure should be
+//=== removed
+   if(deg(I[1])>0){return(I);}
+   int i,j;
+   number n;
+   poly p;
+   for(i=2;i<=size(I);i++)
+   {
+      j=1;
+      while(j<=size(I[i]))
+      {
+         n=leadcoef(I[i][j]) mod leadcoef(I[1]);
+         p=n*leadmonom(I[i][j]);
+         I[i]=I[i]-I[i][j]+p;
+         if(p!=0){j++;}
+      }
+   }
+   return(I);
+}
+
+
+proc stdZ(ideal I)
+{
+//--- procedure from primdecint.lib (static)
+//--- this is needed because we want the leading coefficients to be positive
+//--- otherwhise reduce gives wrong results! should be replaced later by std
+   I=simplify(I,2);
+   I=normalizeZ(I);
+   ideal J=std(I);
+   int i;
+   for(i=1;i<=size(J);i++)
+   {
+      if(leadcoef(J[i])<0){J[i]=-J[i];}
+   }
+   J=normalizeZ(J);
+   attrib(J,"isSB",1);
+   return(J);
+}
+
+proc mydimension(ideal i) 
+{
+  i = std(i);
+  def BAS = basering;
+  ideal r = 1;
+
+  if(size(i) == 0)
+  {        
+     return(nvars(BAS)+1);
+  }
+        
+  if (reduce(r,i) == 0)
+  {       
+     return(-1);
+  }
+           
+  if (charstr(BAS)=="integer")
+  {
+     if (deg(i[1]) == 0)
+     {
+	ideal i_ = i[2..size(i)];
+	ring r = 0,x(1..nvars(BAS)),dp;
+	ideal ii = fetch(BAS,i_);
+	ii = std(ii);
+	return(dim(ii));
+     }
+	
+     if (deg(i[size(i)]) == 0)
+     {
+	ideal i_ = i[1..size(i)-1] ;
+	ring r = 0,x(1..nvars(BAS)),dp;
+	ideal ii = fetch(BAS,i_);
+	ii = std(ii);
+	return(dim(ii));
+     }
+
+     ring r = 0,x(1..nvars(BAS)),dp;
+     ideal ii =fetch(BAS,i);
+     ii = std(ii);
+     return(dim(ii)+1);
+  }
+  else
+  {
+     return(dim(i));
+  }
+}
+
+proc myheight(i) 
+{
+  i=std(i);
+  if(charstr(basering)=="integer")
+  {
+     return(nvars(basering)+1-mydimension(i));
+  }
+  else
+  {
+     return(nvars(basering)-dim(i));
+  }
+}
+
+proc myintersect(ideal i, ideal j) 
+{
+  i=stdZ(i);
+  j=stdZ(j);
+
+  def BAS = basering;
+
+  if (charstr(BAS)=="integer")
+  {
+     string tempstr="ring r2=integer,("+varstr(BAS)+",t),dp;";
+  }
+  else
+  {
+     string tempstr="ring r2="+charstr(BAS)+",("+varstr(BAS)+",t),dp;";
+  }
+	
+  execute(tempstr); 
+  ideal J = 0;
+  int k;
+  ideal ii=fetch(BAS,i);
+  for(k=1; k <= size(ii); k++)
+  {
+     J=J,t*ii[k];
+  }
+  ideal jj=fetch(BAS,j);
+  for(k=1; k <= size(jj); k++)
+  {
+     J=J,(1-t)*jj[k];
+  }
+  ideal e=eliminate(J,t);
+  setring BAS;
+  return(fetch(r2,e));
+}
+
+proc mysat(ideal i, poly f)
+{
+  def BAS = basering	;
+  ring newR = integer,(X(1..nvars(BAS)),T),dp ;
+  map psi=BAS,maxideal(1);
+  ideal Q=psi(i),1-T*psi(f);
+  Q=stdZ(Q);
+  ideal e=eliminate(Q,T);
+  setring BAS;
+  ideal result=fetch(newR,e);
+  return(result);
+}
+
+proc myradical(ideal i) 
+{
+  i=stdZ(i);
+  def BAS = basering;
+  if (charstr(BAS)=="integer")
+  {
+     int j;
+     poly p = 1;
+     for(j = 1;j<=nvars(BAS);j++)
+     {
+        p = p*var(j);
+     }
+     ideal e = eliminate(i,p);
+     ideal radi=1;
+     if(e[1]==1 || e[1] == -1)
+     {
+	return(radi);
+     }
+     if(e[1]!=0)
+     {
+	string tempstr="int k="+string(e[1])+";";
+	execute(tempstr);
+	list prdiv = primefactors(k)[1];
+	for(j=1; j <= size(prdiv); j++)
+	{
+	   ring rj = prdiv[j],x(1..nvars(BAS)),dp;
+	   ideal radij = radical(fetch(BAS,i));
+	   radij = std(radij);
+	   setring BAS;
+	   ideal radij2=fetch(rj,radij);
+	   radij2=radij2,prdiv[j];
+	   radij2 = std(radij2);
+	   radi=myintersect(radi,radij2);
+           kill rj,radij2;
+	}
+     }
+     else
+     {
+	poly g=1;
+	for(j=1; j<= size(i); j++)
+	{
+	   g = g*leadcoef(i[j]);
+	}
+	ideal rig = i,g;
+	rig=myradical(rig);
+	ring rq=0,x(1..nvars(BAS)),dp;
+	ideal riq=radical(fetch(BAS,i));
+	riq=stdZ(riq);
+	ideal B;
+	for(j=1;j<=size(riq);j++)
+	{
+	   B[j]=cleardenom(riq[j]);
+	}
+	poly s=1;
+	for(j=1;j<=size(B);j++)
+	{
+	   s=s*leadcoef(B[j]);
+	}
+	setring BAS;
+	ideal riginf=mysat(fetch(rq,B),fetch(rq,s));
+	radi=myintersect(rig,riginf);
+     }
+	return(radi);
+  } 
+  else 
+  {
+     return(radical(i));
+  }
+}
+
+proc myquotient(i,j1,j2) 
+{
+  def BAS = basering;
+  int j;
+  ideal q = 1;
+             
+  for(j=1; j <= size(j2); j++)
+  {
+     ideal s = j2[j],-j1,-i;
+     matrix m = matrix(syz(s));
+     m = m[1,1..ncols(m)];
+     matrix n[1][ncols(m)] = m[1,1..ncols(m)];
+     ideal qq = n;
+     q = myintersect(q,qq);
+     kill m,n,qq,s;
+  }
+
+  q = reduce(q,std(i));
+  return(stdZ(q));
+}
+
+proc getSmallestZ(ideal J)
+{
+//--- Computes the polynomial of smallest degree of J.
+  int i;
+  poly lp,li;
+  poly p = J[1];
+  int d = deg(p);
+  int di;
+  for(i = 2; i <= ncols(J); i++)
+  {
+    if(J[i] != 0)
+    {
+      di = deg(J[i]);
+
+      lp = leadcoef(p);
+      if(lp < 0)
+      { lp = -1*lp;}
+
+      li = leadcoef(J[i]);
+      if(li < 0)
+      { lp = -1*li;}
+      
+      if((di < d) || (di == d && li < lp))
+      {
+        p = J[i];
+        d = di;
+      }
+      else
+      {
+        if(di == d)
+        {
+          if(size(J[i]) < size(p))
+          {
+            p = J[i];
+          }
+        }
+      }
+    }
+  }
+  return(p);
+}
+
+proc homjj(i,j) 
+{
+  def BAS = basering;
+  ideal endphi;
+  if (defined(normap))
+  { endphi = normap;}
+  else
+  { endphi = maxideal(1);}
+  poly a = getSmallestZ(j);
+  ideal aJJ = myquotient(i,a*j,j),i;            
+  attrib(aJJ,"isSB",1);
+  ideal aa = a;
+  aa = stdZ(aa);
+  ideal rf = interred(reduce(aJJ,aa));
+
+  if (size(rf)==0) 
+  {                                      // a*j:j = ideal(a) modulo i                  
+     ideal homj = i;
+     export(homj);
+     export(endphi);
+     list result=BAS,"homj","endphi",0;
+     return(result);
+  } 
+  else 
+  {
+     ideal f = a,rf;
+     int n = size(f);
+
+     ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;
+     
+     ideal f = fetch(BAS,f);
+     ideal i = fetch(BAS,i);
+     ideal Q = i;
+     poly a = fetch(BAS,a);
+     ideal af = a*f,i;
+
+     matrix T = matrix(ideal(T(1..n)),1,n);
+     int ii,jj,kk;
+     matrix A;
+     for(ii=2;ii<=n;ii++) 
+     {
+	for(jj=2;jj<=ii;jj++) 
+        {
+	   A=lift(af,f[ii]*f[jj]);
+//--- lift function is only working up to sign!
+	   poly q = 0;
+	   for(kk=1;kk<=size(af);kk++)
+	   {
+	      q=q+af[kk]*A[kk,1];
+	   }
+				
+	   if (q == f[ii]*f[jj])
+	   {
+	      matrix AA[n][1] = A[1..n,1];
+	   }
+	   else
+	   { 
+	      matrix AA[n][1]  = -A[1..n,1];
+	   }
+                               
+	   Q = Q,ideal(T(ii)*T(jj) - T*AA);
+           kill AA;
+           kill q;
+	}
+     }
+
+     ideal fi = f,i;
+     matrix syzfi = matrix(syz(fi));
+     matrix syzfii[n][n] = syzfi[1..n,1..n];
+
+     Q = Q,ideal(T*syzfii);
+     Q = subst(Q,T(1),1);
+                
+     ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;
+
+     ideal homj = imap(newR1,Q);
+     homj = stdZ(homj);
+     ideal endphi = fetch(BAS,endphi);
+     export(homj);
+     export(endphi);
+     list result = newR2,"homj","endphi",1;
+     return(result);
+  }
+}
+
+proc testideal(ideal i) 
+{
+  i=stdZ(i);
+  if(size(i) == 0)
+  {
+     ideal result = 1;
+     return(result);
+  }
+  ideal j = minor(jacob(i),myheight(i));
+  ideal tmp = i,j;
+  ideal result = myradical(tmp);
+  return(result);
+}
+
+proc elimvar(ideal i)
+{
+  def BAS=basering;
+  int n=size(i);
+  int j;
+
+  if (defined(phi))
+  {ideal endphi = phi; kill phi;}
+
+  string ns;
+  poly tt;
+  int pos;
+  
+  for(j=1;j<=n;j++)
+  {                
+// --- Schauen, ob lineare Monome in i[j] existieren
+     tt = jet(i[j],1)-jet(i[j],0);
+   // --- Monome gefunden
+     pos = 0;
+     int k;
+     for(k=1;k<=size(tt);k++)
+     {
+	if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+	{
+	   pos = k;
+	}
+     }
+     kill k;
+
+     if (pos > 0)
+     { 
+	poly t = tt[pos];
+        kill tt;
+        kill pos;
+	if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+	{
+	   poly v = leadcoef(t)*t;
+           attrib(v,"isSB",1);
+	   int b = 0;
+	   int k;
+           poly rk;
+	   poly rest=i[j]-t;
+
+	   for(k=1;k<=size(rest);k++)
+	   {
+              rk = rest[k];
+              attrib(rk,"isSB",1);
+	      if (reduce(rk,v) == 0)
+	      {
+		 b = 1;
+	      }
+	   }
+           kill k;
+	   if (b == 0)
+	   {
+	      if (leadcoef(t) == 1)
+	      {
+		 poly replace = -(i[j]-t);
+	      }
+	      else
+	      {
+		 poly replace = i[j]-t;       
+	      }
+              kill j;
+              ideal QQ = subst(i,v,replace);
+              QQ = simplify(QQ,2);
+              ideal phi = subst(endphi,t,replace);
+              string s = varstr(BAS);
+	      string strv = string(v);
+	      int p = find(s,strv);               
+
+	      if (p > 1 && p < size(s))
+	      {
+		 ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+	      }
+              if (p == 1)
+	      {
+		 ns=string(s[2+size(strv)..size(s)]);
+	      }
+	      if (p+size(strv)-1 == size(s))
+	      {
+		 ns=string(s[1..size(s)-size(strv)-1]);
+	      }
+				
+	      string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+              execute(tmpstr);
+
+              ideal i = imap(BAS,QQ);
+              ideal phi = imap(BAS,phi);
+              export(phi);
+	      list result = elimvar(i);
+	      result[4] = 1;				
+	      setring BAS;
+	      return (result);
+	   }
+	}
+     }
+  }
+  ideal eli=i;
+  export(eli);
+  if (defined(endphi))
+  { ideal ephi = endphi;}
+  else
+  { ideal ephi = maxideal(1);}
+  export(ephi);
+  list result = BAS,"eli","ephi",0;
+  return(result);
+}
+
+proc isprimZ(ideal i)
+{
+  list p =  minAssZ(i);
+  int j;
+  if(size(p) == 1)
+  { j=1;}
+  return(j);
+}
+
+proc mynormal(ideal i) 
+{
+  def BAS = basering;
+
+  if (isprimZ(i) == 0)
+  { 
+     "WARNING! The input is not prime!";
+     "We will continue with the procedure normalZ(i)";
+     list result = normalZ(i);
+     return(result);
+  }
+
+  ideal j = testideal(i);                                        
+  list h = homjj(i,j);
+
+  if (h[4] == 0)
+  {
+     def NewR = h[1];
+     setring NewR;
+     ideal norid = homj;
+     if(defined(normap))
+     {ideal normap  = endphi;}
+     else
+     {ideal normap = maxideal(1);};
+     export(norid);
+     export(normap);
+     list result = BAS,"norid","normap";
+     setring BAS;
+     return(result);
+  }
+  else
+  {
+     def NewR = h[1];
+     setring NewR;
+     list e = elimvar(homj);
+     if (e[4] == 0)
+     {
+        ideal i = homj;
+        ideal normap = endphi;
+        export(normap);
+        list result = mynormal(i);
+        setring BAS;
+        return(result);
+     }
+     else
+     {
+        def NewR1 = e[1];
+        setring NewR1;
+        ideal i = stdZ(eli);
+        ideal normap = ephi;
+        export(normap);
+        ideal ii = fetch(BAS,i);
+        ii = stdZ(ii);
+        ideal c1 = interred(reduce(ii,i));
+        ideal c2 = interred(reduce(i,ii));
+
+        if (size(c1)==0 && size(c2)==0)
+        {
+           ideal norid = i;
+           export(norid);
+           list result = NewR1,"norid","normap";
+           setring BAS;
+           return(result);
+        }        
+
+        list result = mynormal(i);
+	setring BAS;
+        return(result);
+     }
+  }
+}
+
+proc normalZ(ideal i)
+{                                                                          // AM 8.9.GEÄNDERT!
+  def BAS = basering;
+  ideal irad = myradical(i);
+
+  if(size(reduce(irad,stdZ(i))) != 0)
+  {
+     "WARNING! The input is not reduced!";
+     "We will continue with the reduced part of input";
+     i=irad;
+  }
+
+  int isGlobal = ord_test(BAS);
+
+  if (isGlobal != 1)
+  {
+ //--- We change to dp ordering.
+    list rl = ringlist(BAS);
+    list origOrd = rl[3];
+    list newOrd = list("dp", intvec(1:nvars(BAS))), list("C", 0);
+    rl[3] = newOrd;
+    def globR = ring(rl);
+    setring globR;
+    ideal i = fetch(BAS,i);
+    list L = minAssZ(i);
+    setring BAS;
+    L = fetch(globR,L);
+  }
+  else
+  {
+    list L = minAssZ(i);
+  }
+ 
+  int k = size(L);
+  int j;
+  list NL;
+  for(j=1;j<=k;j++)
+  { 
+     ideal api = L[j];
+     if (deg(api[1]) == 0)
+     {
+        "field";
+        int p = int(api[1]);
+        ring rnew = p,x(1..nvars(BAS)),dp; 
+        ideal api = fetch(BAS,api);
+        list n = normalP(api,"withRing");
+        def r1 = n[1][1];
+        setring r1;
+        NL[j] = r1,"norid","normap";
+        setring BAS;
+        kill p,rnew,api,r1;
+     }
+     else  
+     {     
+        NL[j] = mynormal(api);
+        kill api;
+     }
+  }
+  return(NL);
+}
+
+
+proc isnor(ideal i)
+{       
+  def BAS = basering;  
+  int isn;                                              
+
+  if (dim(i) == -1)
+  {
+     isn = 1; 
+     return(isn);
+  }
+
+  ideal j = testideal(i);
+  if (charstr(BAS) == "integer")
+  {
+     poly a = j[1];
+     ideal aJJ = myquotient(i,a*j,j);
+  }
+
+  qring q = std(i);
+  setring q;
+  ideal j = fetch(BAS,j);
+  poly a = fetch(BAS,a);
+  
+  if (charstr(BAS) == "integer")
+  {  ideal aJJ = fetch(BAS,aJJ);}
+  else
+  { ideal aJJ = quotient(a*j,j);}
+           
+  attrib(aJJ,"isSB",1);
+  ideal aa = a;
+  aa = std(aa);
+  ideal rf = interred(reduce(aJJ,aa));
+  if (size(rf)==0)
+  {
+    isn = 1;
+  }
+
+  return(isn);
+  setring BAS;
+}
+
+proc slocusZ(ideal i)
+{
+  i = stdZ(i);
+  list Sing,mAi,mAj;
+  int ii,mm,nn,mai,maj,pp,sg;
+  ideal S,SS,P,J,M,QM,F,SL,I;
+  mAi = minAssZ(i);
+  mai = size(mAi);
+  for (ii=1;ii<=mai;ii++)
+  {
+     P = mAi[ii];
+     pp = size(P);
+     J = testideal(P);
+     S = 1;
+     mAj = minAssZ(J);
+     maj = size(mAj);
+     for (mm=1;mm<=maj;mm++)
+     {
+        M = mAj[mm];
+        QM = stdZ(M^2);
+        for (nn=1;nn<=pp;nn++)
+        {
+           F = stdZ(P[nn]);
+           SL = interred(reduce(F,QM));
+           if (size(SL) == 0)
+           {S = myintersect(S,M);}
+        }
+     }
+     S = stdZ(S);
+     Sing[size(Sing)+1] = S;
+  }   
+  sg = size(Sing);
+  SS = 1;
+  for (ii=1;ii<=sg;ii++)
+  {
+     I = Sing[ii];
+     SS = myintersect(SS,I);
+  }
+  SS = stdZ(SS);
+  return(SS);
+}
+
+proc singid(ideal i)
+{
+  def BAS = basering;
+  ideal result;
+  if (i[1] == 0)
+  { result = ideal(1);}
+  else
+  {
+     if (charstr(BAS)=="integer")
+     { result = slocusZ(i);}
+     else
+     { result = slocus(i);}
+  }
+  return(result);
+}
+
+proc transversalT(ideal J, list E,list #)
+{
+//----------------------------------------------------------------------------
+// check whether J and each element of the list E meet transversally
+//----------------------------------------------------------------------------
+   def R=basering;
+   if(size(#)>0)
+   {
+     ideal pp=#[1];
+   }
+   int i;
+   ideal T,M;
+   ideal Jstd=stdZ(J);
+   ideal Tstd;
+   int d=nvars(basering)-mydimension(Jstd)+1;   // d=n-dim(V(J) \cap hypersurface)
+   for(i=1;i<=size(E);i++)
+   {
+      if(size(reduce(E[i],Jstd))==0)
+      {
+//--- V(J) is contained in E[i]
+        return(0);
+      }
+      T=J,E[i];
+      Tstd=stdZ(T);
+      d=nvars(basering)-mydimension(Tstd);
+      if(size(interred(reduce(1,Tstd)))!=0)
+      {
+//--- intersection is non-empty
+//!!! abgeklemmt, da es doch in der Praxis vorkommt und korrekt sein kann!!!
+//!!! wenn ueberhaupt dann -1 zurueckgeben!!!
+//         if((d>=4)&&(size(T)>=10)){return(0);}
+         M=minor(jacob(T),d,Tstd)+T;
+         M=stdZ(M);
+         poly e=1;
+         if(size(interred(reduce(e,M)))>0)
+         {
+//--- intersection is not transversal
+           if(size(#)==0)
+           {
+              return(0);
+           }
+           M=stdZ(myradical(M));
+           if(size(reduce(pp,M))>0){return(0);}
+         }
+      }
+   }
+//--- passed all tests
+   return(1);
+}
+
+proc substpart(ideal endid, ideal endphi, int homo, intvec rw)
+{
+   def newRing = basering;
+   int ii,jj;
+   map phi = newRing,maxideal(1);    
+   list Le = elimpart(endid);
+   int q = size(Le[2]);    
+   intvec rw1 = 0;        
+   rw1[nvars(basering)] = 0;
+   rw1 = rw1+1;            //rw1=1,..,1 (as many 1 as nvars(basering))
+
+   while( size(Le[2]) != 0 )
+   {
+      endid = Le[1];
+      if ( defined(ps) )
+      { kill ps; }
+      map ps = newRing,Le[5];
+      phi = ps(phi);
+      for(ii=1;ii<=size(Le[2]);ii++)
+      {
+         phi=phi(phi);
+      }
+      //eingefuegt wegen x2-y2z2+z3
+
+      for( ii=1; ii<=size(rw1); ii++ )
+      {
+         if( Le[4][ii]==0 )        //ii = index of var which was substituted
+         {
+            rw1[ii]=0;             //substituted vars have entry 0 in rw1
+         }
+      }
+      Le=elimpart(endid);          //repeated application of elimpart
+      q = q + size(Le[2]);
+   }
+   endphi = phi(endphi);
+   if( nvars(newRing) == q )
+   {
+     ring lastRing = char(basering),T(1),dp;
+     ideal endid = T(1);
+     ideal endphi = T(1);
+     for(ii=2; ii<=q; ii++ )
+     {
+        endphi[ii] = 0;
+     }
+     export(endid,endphi);
+     list L = lastRing;
+     setring newRing;
+     return(L);
+   }
+
+   if (homo==1 && nvars(newRing)-q >1 && size(endid) >0 )
+   {
+      jj=1;
+      for( ii=2; ii<size(rw1); ii++)
+      {
+         jj++;
+         if( rw1[ii]==0 )
+         {
+            rw=rw[1..jj-1],rw[jj+1..size(rw)];
+            jj=jj-1;
+         }
+      }
+      if( rw1[1]==0 ) { rw=rw[2..size(rw)]; }
+      if( rw1[size(rw1)]==0 ){ rw=rw[1..size(rw)-1]; }
+
+      ring lastRing = char(basering),(T(1..nvars(newRing)-q)),(a(rw),dp);
+   }
+   else
+   {
+      ring lastRing = char(basering),(T(1..nvars(newRing)-q)),dp;
+   }
+   ideal lastmap;
+   jj = 1;
+
+   for(ii=1; ii<=size(rw1); ii++ )
+   {
+      if ( rw1[ii]==1 ) { lastmap[ii] = T(jj); jj=jj+1; }
+      if ( rw1[ii]==0 ) { lastmap[ii] = 0; }
+   }
+   map phi1 = newRing,lastmap;
+   ideal endid  = phi1(endid);      //### bottelneck
+   ideal endphi = phi1(endphi);
+
+/*
+Versuch: subst statt phi
+   for(ii=1; ii<=size(rw1); ii++ )
+   {
+      if ( rw1[ii]==1 ) { endid = subst(endid,var(ii),T(jj)); }
+      if ( rw1[ii]==0 ) { endid = subst(endid,var(ii),0); }
+   }
+*/
+   export(endid);
+   export(endphi);
+   list L = lastRing;
+   setring newRing;
+   return(L);
+}
+
+
+proc lipmanresolve(ideal i)
+{    
+ //--- assertion: i radical ideal and dim(i)=2
+   i = std(i);
+   int dbg = printlevel - voice + 2;
+
+   if(dim(i) != 2)
+   { "WARNING! The input is not of dimension 2!";
+      "The result may be wrong.";}
+
+   def BAS = basering;
+   ideal irad = myradical(i);
+
+   if(size(reduce(irad,std(i))) != 0)
+   { "WARNING! The input is not reduced!";
+     "We will continue with the reduced part of input";
+      i=irad;}
+
+   list allRings,endRings;
+   allRings[1] = BAS;
+   int e,d,ii;
+   module path = [0,0,1]; //---[start,knoten,zweig von knoten]
+   matrix Path = matrix(path);
+   export(Path);
+
+ while(ii < size(allRings))
+ {
+   ii++;
+   def S = allRings[ii];
+   setring S;
+   if (size(i) == 0)
+   { ideal s = 1;}
+   else
+   { ideal s = std(singid(i));}
+   e = isnor(i);
+   d = mydimension(s);
+
+   if (e == 1 && d == -1)
+   { 
+//---S/i is normal and regular
+       ideal lip = i;
+       if (defined(liph) == 0)
+       { ideal liph = maxideal(1);}
+       export(lip);
+       endRings[size(endRings)+1] = S;
+       kill S;
+   }
+
+   if (e == 1 && d > -1)
+   {
+//---S/i is normal and singular
+       list b = blowUp2(i,s);
+       int r = size(b);
+       int k;
+       for (k=1;k<=r;k++)
+        {
+          def Newr1 = b[k];
+          setring Newr1;
+          def path = imap(S,path);
+          path = path,[-1,ii,k];           //---path=path,[BlowUp,Knoten,Zweig vom Knoten]
+          matrix Path = matrix(path);
+          export(Path);
+          allRings[size(allRings)+1] = Newr1;
+          ideal is = std(Jnew);
+          ideal slis = std(singid(is));
+          list E;
+          E[size(E)+1] = eD;
+          int tt = transversalT(Jnew,E);
+
+          if (tt == 1)
+          { ideal i = Jnew;}
+          else
+          { ideal i = myintersect(Jnew,myradical(eD));}    //--- muss das wirklich myradical(ED) sein?
+
+          map phi = S,bM;
+          if (defined(liph))
+          { ideal liph = phi(liph);}
+          else
+          { ideal liph = maxideal(1);}
+          export(liph);
+          kill Newr1,tt,E;
+          setring S;
+       }
+       kill b,k,r,S;
+   }
+
+
+   if (e == 0)
+   {
+//---S/i is not normal
+
+       if (charstr(S) == "integer")
+       {  
+          "integer";
+          list n = normalZ(i);
+          int rr = size(n);
+          int kk;
+          for (kk=1;kk<=rr;kk++)
+          {                      
+              def NewrZ = n[kk][1];                         
+              setring NewrZ;
+              def path = imap(S,path);
+              path = path,[1,ii,kk];                   //---path=path,[Normalisierung,Knoten,Zweig vom Knoten]
+              matrix Path = matrix(path);
+              export(Path);
+              map phi = S,normap;
+              if (defined(liph))
+              { ideal liph = phi(liph);}
+              else
+              { ideal liph = normap;}
+              ideal i = std(norid);
+              export(i);
+              allRings[size(allRings)+1] = NewrZ;
+           } 
+           kill NewrZ;
+           setring S;
+       }
+       else
+       {
+          if (char(S) == 0)
+          { list n = normal(i);}
+          else
+          { list n = normalP(i,"withRing");}
+
+          int rr=size(n[1]);
+          int kk;
+          for (kk=1;kk<=rr;kk++)
+          {                      
+             def Newrk = n[1][kk];                         
+             setring Newrk;
+             module path = imap(S,path);
+             path = path,[1,ii,kk];             //---path=path,[Normalisierung,Knoten,Zweig vom Knoten]
+             matrix Path = matrix(path);
+             export(Path);
+             map nor = S,normap;
+             if (defined(liph))
+             { ideal liph = nor(liph);}
+             else
+             { ideal liph = normap;}
+             if (char(S) == 0)
+             {          
+                int homo = homog(norid);
+                intvec rw; 
+
+                if(homo == 1)
+                { rw = ringweights(Newrk);}
+
+                list L = substpart(norid,normap,homo,rw);
+                def newrk = L[1];
+                setring newrk;
+                allRings[size(allRings)+1] = newrk;
+                ideal i = std(endid);
+                export(i);
+                map phi = Newrk,endphi;
+                ideal liph = phi(liph);
+                def path = imap(Newrk,path);
+                matrix Path = matrix(path);
+                export(Path);
+                kill homo,rw,phi,newrk;
+             }
+             else
+             { 
+                ideal i = std(norid);
+                export(i);
+                allRings[size(allRings)+1] = Newrk;
+             } 
+
+             export(liph);
+             kill Newrk,L;
+             setring S;
+          }
+       }
+       kill kk,n,rr;
+    }
+ }  
+ list result = endRings,allRings;
+ return(result);
+}
+
+proc lipmanOutputText(int dbg)
+{
+  if ( dbg >= 0 )
+  {
+    "";
+      "// 'normal' created a list, say l, of two elements.";
+   
+    "// To see the list type";
+    "      l;";
+    "";
+    "// * l[1] is a list of", size(endRings)," normal and regular ring(s).";
+    "// To access the i-th ring l[1][i], give it a name, say Ri, and type";
+    "     def R1 = l[1][1]; setring R1; lipid; lipmap;";
+    "// For the other rings type first (if R is the name of your base ring)";
+    "     setring R;";
+    "// and then continue as for R1.";
+    "// Ri/lipid are the charts of the desingularized ring R/i";
+ 
+    "";
+    "// * l[2] shows all", size(allRings), "ring(s) that occur while computing.";
+    "// To access the i-th ring l[2][j], give it a name, say ri, and type";
+    "     def r1 = l[2][1]; setring r1; i; liph;";
+   "// For the other rings type first (if R is the name of your base ring)";
+    "     setring R;";
+    "// and then continue as for r1.";
+    "// ri/i are the charts of the normalizations and blowing ups of R/i";
+ 
+  }
+}
+;
+// ** loaded /usr/share/Singular/LIB/all.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/qmatrix.lib (13334,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/perron.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/nctools.lib (13467,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/ncdecomp.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/ncalg.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/involut.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/gkdim.lib (12235,2009-11-03)
+// ** loaded /usr/share/Singular/LIB/freegb.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/dmodvar.lib (13492,2010-10-14)
+// ** loaded /usr/share/Singular/LIB/dmodapp.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/dmod.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/central.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/bfun.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/zeroset.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/weierstr.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/tropical.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/triang.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/toric.lib (12330,2009-11-26)
+// ** loaded /usr/share/Singular/LIB/teachstd.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/surfex.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/surf.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/stratify.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/spectrum.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/spcurve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/solve.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/signcond.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/sing4ti2.lib (13269,2010-09-23)
+// ** loaded /usr/share/Singular/LIB/sing.lib (12394,2010-01-04)
+// ** loaded /usr/share/Singular/LIB/sheafcoh.lib (13328,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/sagbi.lib (13505,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rootsur.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rootsmr.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/rinvar.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/ring.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/reszeta.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/resolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/resgraph.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/resbin.lib $Id: resbin.lib$
+// ** loaded /usr/share/Singular/LIB/reesclos.lib (1.32,2001/01/16)
+// ** loaded /usr/share/Singular/LIB/redcgs.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/realrad.lib (13352,2010-09-30)
+// ** loaded /usr/share/Singular/LIB/random.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/qhmoduli.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/primitiv.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/primdec.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/presolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/polymake.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/poly.lib (12443,2010-01-19)
+// ** loaded /usr/share/Singular/LIB/pointid.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/phindex.lib (12571,2010-03-01)
+// ** loaded /usr/share/Singular/LIB/ntsolve.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/normaliz.lib (12790,2010-05-14)
+// ** loaded /usr/share/Singular/LIB/normal.lib (13488,2010-10-14)
+// ** loaded /usr/share/Singular/LIB/noether.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/mregular.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/mprimdec.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/monomialideal.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/mondromy.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/modstd.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/matrix.lib (12898,2010-06-23)
+// ** loaded /usr/share/Singular/LIB/makedbm.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/lll.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/linalg.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/latex.lib (13477,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/kskernel.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/jacobson.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/intprog.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/inout.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/hyperel.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/homolog.lib (12381,2009-12-11)
+// ** loaded /usr/share/Singular/LIB/hnoether.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/grwalk.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/groups.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/graphics.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/gmssing.lib (13548,2010-10-19)
+// ** loaded /usr/share/Singular/LIB/gmspoly.lib (12529,2010-02-08)
+// ** loaded /usr/share/Singular/LIB/general.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/finvar.lib (13326,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/equising.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/elim.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/deform.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/decodegb.lib (13483,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/curvepar.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/crypto.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/control.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/compregb.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/classify.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/cimonom.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/brnoeth.lib (13312,2010-09-29)
+// ** loaded /usr/share/Singular/LIB/atkins.lib (12932,2010-06-30)
+// ** loaded /usr/share/Singular/LIB/assprimeszerodim.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/arcpoint.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/algebra.lib (12436,2010-01-15)
+// ** loaded /usr/share/Singular/LIB/alexpoly.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/aksaka.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/ainvar.lib (13536,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/absfact.lib (13534,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/primdecint.lib (13403,2010-10-06)
+> ring r=integer,(x,y,z),dp;
+// ** You are using coefficient rings which are not fields.
+// ** Please note that only limited functionality is available
+// ** for these coefficients.
+// ** 
+// ** The following commands are meant to work:
+// ** - basic polynomial arithmetic
+// ** - std
+// ** - syz
+// ** - lift
+// ** - reduce
+> ideal A3=x4+y2+z2;
+> isnor(A3);
+1
+> list n=mynormal(A3);
+> n;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3)
+//        block   2 : ordering C
+[2]:
+   norid
+[3]:
+   normap
+> def r1=n[1];
+> setring r1;
+> norid;
+norid[1]=X(1)^4+X(2)^2+X(3)^2
+> normap;
+normap[1]=X(1)
+normap[2]=X(2)
+normap[3]=X(3)
+> setring r;
+> A3;
+A3[1]=x4+y2+z2
+> ideal j=testideal(A3);
+> j;
+j[1]=2z
+j[2]=2y
+j[3]=2x
+j[4]=-x2-y-z
+> poly a=getSmallestZ(j);
+> a;
+2z
+> ideal aJJ=myqoutient(A3,a*j,j);
+   ? `myqoutient` is not defined
+   ? error occurred in or before STDIN line 2246: `ideal aJJ=myqoutient(A3,a*j,j);`
+   ? expected ideal-expression. type 'help ideal;'
+> ideal aJJ=myquotient(A3,a*j,j);
+> aJJ;
+aJJ[1]=2z
+> aJJ=std(aJJ);
+> ideal aa=a;
+> aa=std(aa);
+> ideal rf=interred(reduce(aJJ,aa));
+> rf;
+rf[1]=0
+> size(rf);
+0
+> proc homjj(i,j) 
+{
+  def BAS = basering;
+  ideal endphi;
+  if (defined(normap))
+  { endphi = normap;}
+  else
+  { endphi = maxideal(1);}
+  poly a = getSmallestZ(j);
+  ideal aJJ = myquotient(i,a*j,j),i;            
+  attrib(aJJ,"isSB",1);
+  ideal aa = a;
+  aa = stdZ(aa);
+  ideal rf = interred(reduce(aJJ,aa));
+  rf;
+
+  if (size(rf)==0) 
+  {                                      // a*j:j = ideal(a) modulo i                  
+     ideal homj = i;
+     export(homj);
+     export(endphi);
+     BAS;
+     list result=BAS,"homj","endphi",0;
+     return(result);
+  } 
+  else 
+  {
+     ideal f = a,rf;
+     int n = size(f);
+
+     ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;
+     
+     ideal f = fetch(BAS,f);
+     ideal i = fetch(BAS,i);
+     ideal Q = i;
+     poly a = fetch(BAS,a);
+     ideal af = a*f,i;
+
+     matrix T = matrix(ideal(T(1..n)),1,n);
+     int ii,jj,kk;
+     matrix A;
+     for(ii=2;ii<=n;ii++) 
+     {
+	for(jj=2;jj<=ii;jj++) 
+        {
+	   A=lift(af,f[ii]*f[jj]);
+//--- lift function is only working up to sign!
+	   poly q = 0;
+	   for(kk=1;kk<=size(af);kk++)
+	   {
+	      q=q+af[kk]*A[kk,1];
+	   }
+				
+	   if (q == f[ii]*f[jj])
+	   {
+	      matrix AA[n][1] = A[1..n,1];
+	   }
+	   else
+	   { 
+	      matrix AA[n][1]  = -A[1..n,1];
+	   }
+                               
+	   Q = Q,ideal(T(ii)*T(jj) - T*AA);
+           kill AA;
+           kill q;
+	}
+     }
+
+     ideal fi = f,i;
+     matrix syzfi = matrix(syz(fi));
+     matrix syzfii[n][n] = syzfi[1..n,1..n];
+
+     Q = Q,ideal(T*syzfii);
+     Q = subst(Q,T(1),1);
+                
+     ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;
+
+     ideal homj = imap(newR1,Q);
+     homj = stdZ(homj);
+     ideal endphi = fetch(BAS,endphi);
+     export(homj);
+     export(endphi);
+     list result = newR2,"homj","endphi",1;
+     return(result);
+  }
+}
+;
+// ** redefining homjj **
+> j;
+j[1]=2z
+j[2]=2y
+j[3]=2x
+j[4]=-x2-y-z
+> list h=homjj(A3,j);
+rf[1]=x4+y2+z2
+> proc homjj(i,j) 
+{
+  def BAS = basering;
+  ideal endphi;
+  if (defined(normap))
+  { endphi = normap;}
+  else
+  { endphi = maxideal(1);}
+  poly a = getSmallestZ(j);
+  ideal aJJ = myquotient(i,a*j,j),i;            
+  aJJ = std(aJJ);
+  ideal aa = a;
+  aa = stdZ(aa);
+  ideal rf = interred(reduce(aJJ,aa));
+  rf;
+
+  if (size(rf)==0) 
+  {                                      // a*j:j = ideal(a) modulo i                  
+     ideal homj = i;
+     export(homj);
+     export(endphi);
+     BAS;
+     list result=BAS,"homj","endphi",0;
+     return(result);
+  } 
+  else 
+  {
+     ideal f = a,rf;
+     int n = size(f);
+
+     ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;
+     
+     ideal f = fetch(BAS,f);
+     ideal i = fetch(BAS,i);
+     ideal Q = i;
+     poly a = fetch(BAS,a);
+     ideal af = a*f,i;
+
+     matrix T = matrix(ideal(T(1..n)),1,n);
+     int ii,jj,kk;
+     matrix A;
+     for(ii=2;ii<=n;ii++) 
+     {
+	for(jj=2;jj<=ii;jj++) 
+        {
+	   A=lift(af,f[ii]*f[jj]);
+//--- lift function is only working up to sign!
+	   poly q = 0;
+	   for(kk=1;kk<=size(af);kk++)
+	   {
+	      q=q+af[kk]*A[kk,1];
+	   }
+				
+	   if (q == f[ii]*f[jj])
+	   {
+	      matrix AA[n][1] = A[1..n,1];
+	   }
+	   else
+	   { 
+	      matrix AA[n][1]  = -A[1..n,1];
+	   }
+                               
+	   Q = Q,ideal(T(ii)*T(jj) - T*AA);
+           kill AA;
+           kill q;
+	}
+     }
+
+     ideal fi = f,i;
+     matrix syzfi = matrix(syz(fi));
+     matrix syzfii[n][n] = syzfi[1..n,1..n];
+
+     Q = Q,ideal(T*syzfii);
+     Q = subst(Q,T(1),1);
+                
+     ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;
+
+     ideal homj = imap(newR1,Q);
+     homj = stdZ(homj);
+     ideal endphi = fetch(BAS,endphi);
+     export(homj);
+     export(endphi);
+     list result = newR2,"homj","endphi",1;
+     return(result);
+  }
+};
+// ** redefining homjj **
+> list h=homjj(A3,j);
+// ** redefining h **
+rf[1]=x4+y2+z2
+> ideal aJJ=myquotient(A3,a*j,j);
+// ** redefining aJJ **
+> aJJ;
+aJJ[1]=2z
+> aJJ=aJJ,i;
+   ? incompatible type in list assignment
+   ? error occurred in or before STDIN line 2972: `aJJ=aJJ,i;`
+> aJJ=aJJ,A3;
+> aJJ=std(aJJ);
+> proc homjj(i,j) 
+{
+  def BAS = basering;
+  ideal endphi;
+  if (defined(normap))
+  { endphi = normap;}
+  else
+  { endphi = maxideal(1);}
+  poly a = getSmallestZ(j);
+  ideal aJJ = myquotient(i,a*j,j);          //---  Erweiterung mit i gelöscht, müsste so stimmen...
+  aJJ = std(aJJ);
+  ideal aa = a;
+  aa = stdZ(aa);
+  ideal rf = interred(reduce(aJJ,aa));
+  rf;
+
+  if (size(rf)==0) 
+  {                                         //--- a*j:j = ideal(a) modulo i                  
+     ideal homj = i;
+     export(homj);
+     export(endphi);
+     BAS;
+     list result=BAS,"homj","endphi",0;
+     return(result);
+  } 
+  else 
+  {
+     ideal f = a,rf;
+     int n = size(f);
+
+     ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;
+     
+     ideal f = fetch(BAS,f);
+     ideal i = fetch(BAS,i);
+     ideal Q = i;
+     poly a = fetch(BAS,a);
+     ideal af = a*f,i;
+
+     matrix T = matrix(ideal(T(1..n)),1,n);
+     int ii,jj,kk;
+     matrix A;
+     for(ii=2;ii<=n;ii++) 
+     {
+	for(jj=2;jj<=ii;jj++) 
+        {
+	   A=lift(af,f[ii]*f[jj]);
+//--- lift function is only working up to sign!
+	   poly q = 0;
+	   for(kk=1;kk<=size(af);kk++)
+	   {
+	      q=q+af[kk]*A[kk,1];
+	   }
+				
+	   if (q == f[ii]*f[jj])
+	   {
+	      matrix AA[n][1] = A[1..n,1];
+	   }
+	   else
+	   { 
+	      matrix AA[n][1]  = -A[1..n,1];
+	   }
+                               
+	   Q = Q,ideal(T(ii)*T(jj) - T*AA);
+           kill AA;
+           kill q;
+	}
+     }
+
+     ideal fi = f,i;
+     matrix syzfi = matrix(syz(fi));
+     matrix syzfii[n][n] = syzfi[1..n,1..n];
+
+     Q = Q,ideal(T*syzfii);
+     Q = subst(Q,T(1),1);
+                
+     ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;
+
+     ideal homj = imap(newR1,Q);
+     homj = stdZ(homj);
+     ideal endphi = fetch(BAS,endphi);
+     export(homj);
+     export(endphi);
+     list result = newR2,"homj","endphi",1;
+     return(result);
+  }
+}
+;
+// ** redefining homjj **
+> list h=homjj(A3,j);
+// ** redefining h **
+rf[1]=0
+//   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+> list n=mynormal(A3);
+// ** redefining n **
+rf[1]=0
+// ** redefining homj
+// ** redefining endphi
+//   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+> n;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   norid
+[3]:
+   normap
+> def r2=n[1];
+> setring r2;
+> norid;
+norid[1]=x4+y2+z2
+> normap;
+normap[1]=x
+normap[2]=y
+normap[3]=z
+> proc homjj(i,j) 
+{
+  def BAS = basering;
+  ideal endphi;
+  if (defined(normap))
+  { endphi = normap;}
+  else
+  { endphi = maxideal(1);}
+  poly a = getSmallestZ(j);
+  ideal aJJ = myquotient(i,a*j,j);          //---  Erweiterung mit i gelöscht, müsste so stimmen...
+  attrib(aJJ,"isSB",1);
+  ideal aa = a;
+  attrib(aa,"isSB",1);
+  ideal rf = interred(reduce(aJJ,aa));
+
+  if (size(rf)==0) 
+  {                                         //--- a*j:j = ideal(a) modulo i                  
+     ideal homj = i;
+     export(homj);
+     export(endphi);
+     BAS;
+     list result=BAS,"homj","endphi",0;
+     return(result);
+  } 
+  else 
+  {
+     ideal f = a,rf;
+     int n = size(f);
+
+     ring newR1 = integer,(X(1..nvars(BAS)),T(1..n)),dp;
+     
+     ideal f = fetch(BAS,f);
+     ideal i = fetch(BAS,i);
+     ideal Q = i;
+     poly a = fetch(BAS,a);
+     ideal af = a*f,i;
+
+     matrix T = matrix(ideal(T(1..n)),1,n);
+     int ii,jj,kk;
+     matrix A;
+     for(ii=2;ii<=n;ii++) 
+     {
+	for(jj=2;jj<=ii;jj++) 
+        {
+	   A=lift(af,f[ii]*f[jj]);
+//--- lift function is only working up to sign!
+	   poly q = 0;
+	   for(kk=1;kk<=size(af);kk++)
+	   {
+	      q=q+af[kk]*A[kk,1];
+	   }
+				
+	   if (q == f[ii]*f[jj])
+	   {
+	      matrix AA[n][1] = A[1..n,1];
+	   }
+	   else
+	   { 
+	      matrix AA[n][1]  = -A[1..n,1];
+	   }
+                               
+	   Q = Q,ideal(T(ii)*T(jj) - T*AA);
+           kill AA;
+           kill q;
+	}
+     }
+
+     ideal fi = f,i;
+     matrix syzfi = matrix(syz(fi));
+     matrix syzfii[n][n] = syzfi[1..n,1..n];
+
+     Q = Q,ideal(T*syzfii);
+     Q = subst(Q,T(1),1);
+                
+     ring newR2 = integer,(X(1..nvars(BAS)),T(2..n)),dp;
+
+     ideal homj = imap(newR1,Q);
+     homj = stdZ(homj);
+     ideal endphi = fetch(BAS,endphi);
+     export(homj);
+     export(endphi);
+     list result = newR2,"homj","endphi",1;
+     return(result);
+  }
+}
+;
+// ** redefining homjj **
+> setring r;
+> list h=homjj(A3,j);
+// ** redefining h **
+// ** redefining homj
+// ** redefining endphi
+//   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+> h;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   homj
+[3]:
+   endphi
+[4]:
+   0
+> def r3=h[1];
+> setring r3;
+> homj;
+homj[1]=x4+y2+z2
+> endphi;
+endphi[1]=x
+endphi[2]=y
+endphi[3]=z
+> setring r;
+> ideal i=x3-y2;
+> isnor(i);
+0
+> list n=mynormal(i);
+// ** redefining n **
+// ** _ is no standard basis
+// ** _ is no standard basis
+//   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+// ** redefining normap
+> n;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   norid
+[3]:
+   normap
+> def r4=n[1];
+> setring r4;
+> norid;
+norid[1]=0
+> normap;
+normap[1]=T(2)^2
+normap[2]=-T(2)^3
+normap[3]=X(3)
+> proc elimvar(ideal i)
+{
+  def BAS=basering;
+  int n=size(i);
+  int j;
+
+  if (defined(phi))
+  {ideal endphi = phi; kill phi;}
+
+  string ns;
+  poly tt;
+  int pos;
+  
+  for(j=1;j<=n;j++)
+  {                
+// --- Schauen, ob lineare Monome in i[j] existieren
+     tt = jet(i[j],1)-jet(i[j],0);
+   // --- Monome gefunden
+     pos = 0;
+     int k;
+     for(k=1;k<=size(tt);k++)
+     {
+	if ((leadcoef(tt[k]) == 1 || leadcoef(tt[k]) == -1) && (pos == 0))
+	{
+	   pos = k;
+	}
+     }
+     kill k;
+
+     if (pos > 0)
+     { 
+	poly t = tt[pos];
+        kill tt;
+        kill pos;
+	if (deg(t) > 0 && (leadcoef(t) == 1 || leadcoef(t) == -1))
+	{
+	   poly v = leadcoef(t)*t;
+           ideal vv = v;
+           attrib(vv,"isSB",1);
+	   int b = 0;
+	   int k;
+           ideal rk;
+	   poly rest = i[j]-t;
+
+	   for(k=1;k<=size(rest);k++)
+	   {
+              rk = rest[k];
+              attrib(rk,"isSB",1);
+	      if (reduce(rk,vv) == 0)
+	      {
+		 b = 1;
+	      }
+	   }
+           kill k;
+	   if (b == 0)
+	   {
+	      if (leadcoef(t) == 1)
+	      {
+		 poly replace = -(i[j]-t);
+	      }
+	      else
+	      {
+		 poly replace = i[j]-t;       
+	      }
+              kill j;
+              ideal QQ = subst(i,v,replace);
+              QQ = simplify(QQ,2);
+              ideal phi = subst(endphi,t,replace);
+              string s = varstr(BAS);
+	      string strv = string(v);
+	      int p = find(s,strv);               
+
+	      if (p > 1 && p < size(s))
+	      {
+		 ns=string(s[1..p-1])+string(s[p+1+size(strv)..size(s)]);
+	      }
+              if (p == 1)
+	      {
+		 ns=string(s[2+size(strv)..size(s)]);
+	      }
+	      if (p+size(strv)-1 == size(s))
+	      {
+		 ns=string(s[1..size(s)-size(strv)-1]);
+	      }
+				
+	      string tmpstr="ring newR1 = integer,("+ns+"),dp;";
+              execute(tmpstr);
+
+              ideal i = imap(BAS,QQ);
+              ideal phi = imap(BAS,phi);
+              export(phi);
+	      list result = elimvar(i);
+	      result[4] = 1;				
+	      setring BAS;
+	      return (result);
+	   }
+	}
+     }
+  }
+  ideal eli=i;
+  export(eli);
+  if (defined(endphi))
+  { ideal ephi = endphi;}
+  else
+  { ideal ephi = maxideal(1);}
+  export(ephi);
+  list result = BAS,"eli","ephi",0;
+  return(result);
+}
+;
+// ** redefining elimvar **
+> proc mynormal(ideal i) 
+{
+  def BAS = basering;
+
+  if (isprimZ(i) == 0)
+  { 
+     "WARNING! The input is not prime!";
+     "We will continue with the procedure normalZ(i)";
+     list result = normalZ(i);
+     return(result);
+  }
+
+  ideal j = testideal(i);                                        
+  list h = homjj(i,j);
+
+  if (h[4] == 0)
+  {
+     def NewR = h[1];
+     setring NewR;
+     ideal norid = homj;
+     if(defined(normap))
+     {ideal normap  = endphi;}
+     else
+     {ideal normap = maxideal(1);};
+     export(norid);
+     export(normap);
+     list result = BAS,"norid","normap";
+     setring BAS;
+     return(result);
+  }
+  else
+  {
+     def NewR = h[1];
+     setring NewR;
+     list e = elimvar(homj);
+     if (e[4] == 0)
+     {
+        ideal i = homj;
+        ideal normap = endphi;
+        export(normap);
+        list result = mynormal(i);
+        setring BAS;
+        return(result);
+     }
+     else
+     {
+        def NewR1 = e[1];
+        setring NewR1;
+        ideal i = stdZ(eli);
+        ideal normap = ephi;
+        export(normap); 
+        list result = mynormal(i);
+	setring BAS;
+        return(result);
+     }
+  }
+}
+;
+// ** redefining mynormal **
+> list n=mynormal(A3);
+// ** redefining n **
+   ? `A3` is undefined
+   ? error occurred in or before ::mynormal line 0: `parameter ideal i; `
+   ? leaving ::mynormal
+   skipping text from `;` error at token `)`
+> setring r;
+> A3;
+A3[1]=x4+y2+z2
+> list n=mynormal(A3);
+// ** redefining n **
+// ** redefining homj
+// ** redefining endphi
+//   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+// ** redefining norid
+// ** redefining normap
+> n;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   norid
+[3]:
+   normap
+> def r5=n[1];
+> setring r5;
+> norid;
+norid[1]=x4+y2+z2
+> normap;
+normap[1]=x
+normap[2]=y
+normap[3]=z
+> setring r;
+>  i;
+i[1]=x3-y2
+> list n=mynormal(i);
+// ** redefining n **
+//   coeff. ring is : Integers
+//   number of vars : 2
+//        block   1 : ordering dp
+//                  : names    X(3) T(2)
+//        block   2 : ordering C
+// ** redefining normap
+> def r6=n[1];
+> setring r6;
+> norid;
+norid[1]=0
+> normap;
+normap[1]=T(2)^2
+normap[2]=-T(2)^3
+normap[3]=X(3)
+> setring r;
+> i;
+i[1]=x3-y2
+> j;
+j[1]=2z
+j[2]=2y
+j[3]=2x
+j[4]=-x2-y-z
+> ideal j=testideal(i);
+// ** redefining j **
+> j;
+j[1]=-y
+j[2]=-x
+> list h=homjj(i,j);
+// ** redefining h **
+> h;
+[1]:
+   //   coeff. ring is : Integers
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    X(1) X(2) X(3) T(2)
+//        block   2 : ordering C
+[2]:
+   homj
+[3]:
+   endphi
+[4]:
+   1
+> def r7=h[1];
+> setring r7;
+> homj;
+homj[1]=T(2)^2-X(1)
+homj[2]=X(1)*T(2)+X(2)
+homj[3]=X(1)^2+X(2)*T(2)
+> ideal i=2x7+5xy4-z3y2;
+   ? error occurred in or before STDIN line 4459: `ideal i=2x7+5xy4-z3y2;`
+   ? expected ideal-expression. type 'help ideal;'
+> setring r;
+> ideal i=2x7+5xy4-z3y2;
+// ** redefining i **
+> isprimZ(i);
+1
+> isnor(i);
+   ? `int`(k) = `bigint` is not supported
+   ? expected `int` = `int`
+   ? expected `int` = `intmat`
+   ? error occurred in or before ::myradical line 18: `int k=2822400000;`
+   ? expected int-expression. type 'help int;'
+   ? leaving ::myradical
+   skipping text from `;` error at token `)`
+   ? leaving ::myradical
+   ? leaving ::testideal
+   ? leaving ::isnor
+. ;
+> myheight(i);
+1
+> ideal j=minor(jacob(i),1),i;
+// ** redefining j **
+> j;
+j[1]=14x6+5y4
+j[2]=20xy3-2yz3
+j[3]=-3y2z2
+j[4]=2x7+5xy4-y2z3
+> radical(j);
+   ? not implemented for rings with rings as coeffients
+   ? error occurred in or before primdec.lib::radical line 5750: `    pr = facstd(i);`
+   ? leaving primdec.lib::radical
+   skipping text from `;` error at token `)`
+> j=std(j);
+> j;
+j[1]=-3y2z2
+j[2]=20xy3-2yz3
+j[3]=y2z3
+j[4]=10xy4
+j[5]=6yz5
+j[6]=xy3z2+2yz5
+j[7]=14x6+5y4
+j[8]=-2yz6
+j[9]=2x7+5xy4
+j[10]=-25y8
+j[11]=14x5yz3+50y7
+j[12]=5xy8
+j[13]=2x6y3+4x5yz3+15y7
+j[14]=2x6yz3
+j[15]=y8z2
+j[16]=x6y2z2-5y6z2
+j[17]=-2x5yz5-5y7z2
+j[18]=x6y8-30y12
+> eliminate(j,xyz);
+_[1]=0
+> poly g = 1;
+> for(j=1; j<= size(i); j++)
+	{
+	   g = g*leadcoef(i[j]);
+	};
+   ? `ideal` <= `int` failed
+   ? expected `int` <= `int`
+   ? expected `intvec` <= `int`
+   ? error occurred in or before STDIN line 4473: `forif (!( j<= size(i))) break;`
+> g=g*leadcoef(i[1]);
+> g;
+2
+> g=g*leadcoef(i[2]);
+   ? wrong range[2] in ideal/module(1)
+   ? error occurred in or before STDIN line 4482: `g=g*leadcoef(i[2]);`
+> leadcoef(i[2]);
+   ? wrong range[2] in ideal/module(1)
+   ? error occurred in or before STDIN line 4483: `leadcoef(i[2]);`
+> g=1;
+> g=g*leadcoef(j[1]);
+> g;
+1
+> j;
+j[1]=1
+> setring r;
+> j;
+j[1]=1
+;
+> i;
+i[1]=2x7+5xy4-y2z3
+> ideal j=minor(jacob(i),1),i;
+// ** redefining j **
+> j;
+j[1]=14x6+5y4
+j[2]=20xy3-2yz3
+j[3]=-3y2z2
+j[4]=2x7+5xy4-y2z3
+> j=std(j);
+> j;
+j[1]=-3y2z2
+j[2]=20xy3-2yz3
+j[3]=y2z3
+j[4]=10xy4
+j[5]=6yz5
+j[6]=xy3z2+2yz5
+j[7]=14x6+5y4
+j[8]=-2yz6
+j[9]=2x7+5xy4
+j[10]=-25y8
+j[11]=14x5yz3+50y7
+j[12]=5xy8
+j[13]=2x6y3+4x5yz3+15y7
+j[14]=2x6yz3
+j[15]=y8z2
+j[16]=x6y2z2-5y6z2
+j[17]=-2x5yz5-5y7z2
+j[18]=x6y8-30y12
+> ideal e=eliminate(j,xyz);
+> e;
+e[1]=0
+> poly g=1;
+// ** redefining g **
+> g=g*leadcoef(j[1]);
+> g;
+-3
+> g=g*leadcoef(j[2]);
+> g;
+-60
+> g=g*leadcoef(j[3]);
+> g;
+-60
+> g=g*leadcoef(j[4]);
+> g;
+-600
+> g=g*leadcoef(j[5]);
+> g;
+-3600
+> *14;
+   ? error occurred in or before STDIN line 4509: `*14;`
+   skipping text from `14`
+> g=g*14;
+> g=g*-2;
+> g=g*2;
+> g=g*-25;
+> g;
+-5040000
+> g=g*14;
+> g=g*5;;
+> g;
+-352800000
+> g=g*2*2;;
+> g=g*-2;
+> g;
+2822400000
+> int k;
+> for(k=1; k<= size(i); k++)
+	{
+	   g = g*leadcoef(j[k]);
+	};
+> g;
+-8467200000
+> size(i);
+1
+> for(k=1; k<= size(j); k++)
+	{
+	   g = g*leadcoef(j[k]);
+	};
+> g;
+-23897825280000000000
+> g=1;
+> for(k=1; k<= size(j); k++)
+	{
+	   g = g*leadcoef(j[k]);
+	};
+> g;
+2822400000
+> ideal rig = i,g;
+> rig=stdZ(rig);
+> rig;
+rig[1]=2822400000
+rig[2]=1411200000xy4-1411200000y2z3
+rig[3]=2x7+5xy4-y2z3
+rig[4]=705600000x2y8-705600000y4z6
+rig[5]=1411200000x6y2z3+705600000xy8-705600000y6z3
+rig[6]=1411200000x5y2z6+705600000xy10-705600000y8z3
+rig[7]=1411200000x4y2z9+705600000xy12-705600000y10z3
+rig[8]=705600000x5y4z6-2469600000xy12+1058400000y10z3
+rig[9]=352800000x3y12-1058400000x2y10z3+1058400000xy8z6-352800000y6z9
+rig[10]=1411200000x3y2z12+705600000xy14-705600000y12z3
+rig[11]=1411200000x2y2z15+705600000xy16-705600000y14z3
+rig[12]=705600000x3y4z12-1058400000xy16+2469600000y14z3
+rig[13]=352800000x6y10z3+1058400000x5y8z6-352800000x4y6z9+2646000000xy16-529200000y14z3
+rig[14]=352800000x6y8z6-352800000x5y6z9+882000000x2y16-2469600000xy14z3-1234800000y12z6
+rig[15]=176400000x4y16-352800000x2y12z6-2646000000y8z12
+rig[16]=1411200000xy2z18+705600000xy18-705600000y16z3
+rig[17]=352800000x3y6z12+2293200000xy18-1587600000y16z3
+rig[18]=352800000x6y6z9-882000000x3y16+2469600000x2y14z3+2116800000xy12z6-176400000y10z9
+rig[19]=1411200000y2z21+705600000xy20-705600000y18z3
+rig[20]=705600000xy4z18-2469600000xy20+1058400000y18z3
+rig[21]=352800000x4y10z9+1234800000x3y8z12-352800000x2y6z15+1675800000xy20-2028600000y18z3
+rig[22]=176400000x3y10z12-1058400000xy6z18-793800000xy22+1852200000y20z3
+rig[23]=176400000x5y8z12-1499400000x3y20+1146600000x2y18z3-2293200000xy16z6+176400000y14z9
+rig[24]=88200000x5y20-1146600000x4y18z3+2293200000x3y16z6-176400000x2y14z9+1852200000xy12z12-88200000y10z15
+rig[25]=176400000x3y8z15-352800000x2y6z18-2293200000x2y22-793800000xy20z3+2734200000y18z6
+rig[26]=352800000x2y10z15+1058400000xy8z18-352800000y6z21-1587600000xy24+882000000y22z3
+rig[27]=88200000x6y18z3+2293200000x4y14z9-793800000x3y12z12+1852200000x2y10z15-529200000xy8z18+220500000xy24-44100000y22z3
+rig[28]=705600000y4z24-2469600000x2y24-352800000xy22z3+1411200000y20z6
+rig[29]=352800000x2y8z18-352800000xy6z21+882000000x2y24+1764000000xy22z3-2646000000y20z6
+rig[30]=176400000x5y14z9-2557800000x4y12z12+1146600000x3y10z15-529200000x2y8z18-1367100000x2y24+617400000xy22z3+44100000y20z6
+rig[31]=352800000x2y6z21+882000000x3y24+1764000000xy20z6+882000000y18z9
+rig[32]=88200000x5y18z6-1323000000x3y14z12-1499400000xy10z18+220500000xy26-44100000y24z3
+rig[33]=352800000y6z24-2646000000x2y26-1587600000xy24z3+2116800000y22z6
+rig[34]=88200000x4y14z12-793800000x3y12z15+1940400000x2y10z18-529200000xy8z21+1543500000x2y26-88200000xy24z3-44100000y22z6
+rig[35]=88200000x6y12z12-1146600000x5y10z15+1190700000x4y24-2734200000x3y22z3+1984500000x2y20z6-176400000xy18z9+441000000y16z12
+rig[36]=44100000x6y24+573300000x4y20z6-1984500000x2y16z12-1455300000y12z18
+rig[37]=88200000x4y12z15-88200000x3y10z18+176400000x2y8z21+2557800000x3y26-2249100000x2y24z3-88200000xy22z6+132300000y20z9
+rig[38]=88200000x6y10z15-661500000x5y24+1499400000x4y22z3-1102500000x3y20z6+176400000x2y18z9-2513700000xy16z12-44100000y14z15
+rig[39]=88200000x4y18z9-264600000x3y16z12+1234800000x2y14z15-529200000xy12z18+88200000y10z21-1278900000xy28+2513700000y26z3
+rig[40]=44100000x5y20z6+308700000x3y16z12+1896300000xy12z18-1433250000xy28+286650000y26z3
+rig[41]=176400000y8z24+441000000x2y28+1323000000xy26z3-1411200000y24z6
+rig[42]=88200000x5y10z18-396900000x5y26-1896300000x4y24z3+2337300000x3y22z6-2160900000x2y20z9+2513700000xy18z12-220500000y16z15
+rig[43]=44100000x5y16z12-1543500000x3y12z18-1565550000x3y28-2227050000x2y26z3+2050650000xy24z6+1565550000y22z9
+rig[44]=352800000xy12z21+617400000y10z24+1543500000x2y30-837900000xy28z3-1587600000y26z6
+rig[45]=88200000xy10z24-2072700000x3y30-573300000x2y28z3+882000000xy26z6-882000000y24z9
+rig[46]=88200000x4y10z21-396900000x5y28-1631700000x4y26z3-1587600000x3y24z6-1543500000x2y22z9+1940400000xy20z12+573300000y18z15
+rig[47]=44100000x5y12z18+2668050000x5y28+595350000x4y26z3-2271150000x3y24z6+1300950000x2y22z9-286650000xy20z12+904050000y18z15
+rig[48]=22050000x6y26z3-2271150000x5y24z6-507150000x4y22z9-286650000x3y20z12+1300950000x2y18z15-110250000xy16z18+2006550000y14z21-1025325000xy32+1334025000y30z3
+rig[49]=88200000x3y18z15-2646000000x2y16z18+1587600000xy14z21+1455300000y12z24-859950000x2y32+551250000xy30z3+1278900000y28z6
+rig[50]=22050000x6y24z6+507150000x5y22z9-1345050000x4y20z12-1300950000x3y18z15-639450000x2y16z18-2006550000xy14z21+738675000x2y32-1786050000xy30z3-11025000y28z6
+rig[51]=88200000y10z27-882000000x3y32-1014300000x2y30z3-573300000xy28z6+2646000000y26z9
+rig[52]=88200000x3y16z18+1278900000xy12z24+904050000x3y32-463050000x2y30z3-308700000xy28z6+2601900000y26z9
+rig[53]=22050000x6y22z9-1345050000x5y20z12-1874250000x4y18z15-639450000x3y16z18-286650000x2y14z21+738675000x3y32+2690100000x2y30z3-396900000xy28z6+11025000y26z9
+rig[54]=88200000x3y14z21+2513700000x2y12z24+198450000x4y32-2315250000x3y30z3-882000000x2y28z6+2690100000xy26z9-132300000y24z12
+rig[55]=44100000x4y22z12+176400000x2y18z18-1389150000y14z24+2017575000x2y34-826875000xy32z3-705600000y30z6
+rig[56]=22050000x6y20z12+1874250000x5y18z15+1786050000x4y16z18+286650000x3y14z21+2480625000x4y32+617400000x3y30z3-441000000x2y28z6-352800000xy26z9-11025000y24z12
+rig[57]=44100000x3y12z24+2182950000x5y32+1256850000x4y30z3-2072700000xy24z12+1543500000y22z15
+rig[58]=176400000x2y16z21-2513700000xy14z24-1455300000y12z27-1786050000x3y34-1852200000x2y32z3-2447550000xy30z6+1323000000y28z9
+rig[59]=44100000x3y18z18-1697850000xy14z24-1598625000x3y34+1025325000x2y32z3+1697850000xy30z6-1609650000y28z9
+rig[60]=22050000x6y18z15+904050000x5y16z18-2006550000x4y14z21+760725000x5y32+2028600000x4y30z3-1896300000x3y28z6-352800000x2y26z9-2668050000xy24z12+2789325000y22z15
+rig[61]=44100000x2y14z24+1455300000xy12z27+551250000x4y34+793800000x3y32z3-904050000x2y30z6-264600000y26z12
+rig[62]=22050000x6y16z18-2006550000x5y14z21-1223775000x6y32+441000000x3y26z9-1918350000x2y24z12+176400000xy22z15-1444275000y20z18
+rig[63]=22050000x4y24z12-2381400000x2y20z18+2127825000y16z24-578812500x2y36+1526962500xy34z3+1411200000y32z6
+rig[64]=44100000x2y12z27+1190700000x5y34+1653750000x4y32z3-198450000x3y30z6+1808100000xy26z12-1543500000y24z15
+rig[65]=22050000x3y14z24-2568825000x5y34-826875000x4y32z3+1146600000x3y30z6+2734200000x2y28z9-1345050000xy26z12+904050000y24z15
+rig[66]=22050000x6y14z21-683550000x3y24z12-264600000xy20z18+1466325000y18z21-226012500xy36+1174162500y34z3
+rig[67]=44100000xy14z27+1455300000y12z30+793800000x4y36+815850000x3y34z3+2734200000x2y32z6-22050000xy30z9-1323000000y28z12
+rig[68]=22050000x5y22z15+1345050000x4y20z18-1477350000x3y18z21-2127825000x2y16z24-485100000y12z30+2794837500x4y36-2188462500x3y34z3-1433250000x2y32z6+595350000xy30z9+429975000y28z12
+rig[69]=44100000xy12z30-396900000x5y36-837900000x4y34z3+2227050000x3y32z6-2138850000x2y30z9-308700000xy28z12+1543500000y26z15
+rig[70]=11025000x3y16z24+700087500x5y36+2541262500x4y34z3-1808100000x3y32z6-1896300000x2y30z9+2546775000xy28z12-2061675000y26z15
+rig[71]=22050000x2y18z24-1389150000y14z30-385875000x4y38-1686825000x3y36z3+2260125000x2y34z6+2370375000xy32z9-2469600000y30z12
+rig[72]=22050000x4y22z18+904050000x3y20z21+826875000x2y18z24-2127825000xy16z27-485100000y14z30+1361587500x4y38-2734200000x3y36z3-270112500x2y34z6+2315250000xy32z9+429975000y30z12
+rig[73]=44100000y12z33+396900000x5y38+1631700000x4y36z3+2756250000x2y32z9-1830150000xy30z12-44100000y28z15
+rig[74]=22050000xy14z30+2800350000x5y38+1697850000x4y36z3-1532475000x3y34z6-1951425000x2y32z9+198450000xy30z12-1168650000y28z15
+rig[75]=11025000x5y28z12+11025000x4y26z15+1984500000x2y22z21-2177437500xy20z24-523687500y18z27+603618750x3y40+2712150000x2y38z3-1110768750xy36z6-771750000y34z9
+rig[76]=22050000x3y22z21+385875000x2y20z24+782775000xy18z27-2612925000y16z30+1361587500x4y40-1808100000x3y38z3-441000000x2y36z6-2122312500xy34z9+165375000y32z12
+rig[77]=11025000x6y26z15-766237500x3y20z24-2816887500x2y18z27+418950000y14z33-1513181250x5y40+595350000x4y38z3-1110768750x3y36z6-1245825000x2y34z9+1901812500xy32z12+711112500y30z15
+rig[78]=5512500x4y20z24-2816887500x3y18z27+923343750x6y40-2083725000x5y38z3-471318750x4y36z6-88200000x3y34z9+281137500x2y32z12+2182950000xy30z15+2100262500y28z18
+rig[79]=11025000x2y20z27+2171925000xy18z30+1245825000y16z33+385875000x5y42+1141087500x4y40z3+2028600000x3y38z6-1719900000x2y36z9-435487500xy34z12+2634975000y32z15
+rig[80]=11025000x5y26z18-1482862500x3y22z24+887512500xy18z30-603618750x5y42+2731443750x4y40z3+2643243750x3y38z6-669768750x2y36z9-678037500xy34z12+1052887500y32z15
+rig[81]=22050000y14z36+2800350000x6y42+683550000x5y40z3-926100000x4y38z6-264600000x3y36z9+2811375000x2y34z12-429975000xy32z15+1014300000y30z18
+rig[82]=11025000x2y18z30+1245825000xy16z33-275625000x6y42-2690100000x5y40z3+170887500x4y38z6+2050650000x3y36z9-170887500x2y34z12+926100000xy32z15+2502675000y30z18
+rig[83]=5512500x6y32z12+898537500x4y28z18+995006250x2y24z24+2819643750y20z30-1710253125x4y44-81309375x3y42z3-604996875x2y40z6+544359375xy38z9
+rig[84]=11025000x2y16z33-5512500x4y36z9-2684587500x3y34z12-749700000x2y32z15-2690100000xy30z18-2039625000y28z21+689062500xy46-137812500y44z3
+rig[85]=5512500x6y18z27-865462500x5y32z12-898537500x3y28z18+912318750xy24z24+1954181250y22z27+491990625x3y44+2776921875x2y42z3+649096875xy40z6-1735059375y38z9
+rig[86]=11025000x4y26z21-2750737500x3y24z24-523687500y18z33+493368750x5y44+1413956250x4y42z3-2734200000x3y40z6-620156250x2y38z9+2676318750xy36z12-2111287500y34z15
+rig[87]=5512500x5y28z18+2566068750x3y24z24-1331268750xy20z30+2024465625x5y44-1181053125x4y42z3-205340625x3y40z6+1170028125x2y38z9+1281656250xy36z12-609131250y34z15
+rig[88]=11025000y16z36-826875000x6y44-2260125000x5y42z3+1675800000x4y40z6+2072700000x3y38z9-600862500x2y36z12+1593112500xy34z15-1631700000y32z18
+rig[89]=5512500x5y18z30+1028081250x6y36z9+1185187500x5y34z12-1074937500x4y32z15-799312500x3y30z18+821362500x2y28z21-377606250xy26z24+1954181250y24z27-1641346875x3y46-2439281250x2y44z3+261843750xy42z6-2018953125y40z9
+rig[90]=2756250x5y24z24+1232043750x3y20z30-2559178125x7y44-1393284375x6y42z3+2195353125x5y40z6+2242209375x4y38z9+1706118750x3y36z12-1540743750x2y34z15-1077693750xy32z18-2747981250y30z21
+rig[91]=5512500x3y24z27+1692337500y18z36-953662500x6y46+840656250x5y44z3+1336781250x4y42z6+1323000000x3y40z9-2268393750x2y38z12-173643750xy36z15+468562500y34z18
+rig[92]=5512500x4y18z33+283893750x6y38z9+1794318750x5y36z12+1085962500x4y34z15+1874250000x3y32z18+2243587500x2y30z21-2477868750xy28z24+1954181250y26z27-952284375x3y48-2577093750x2y46z3+2570203125xy44z6-2480625000y42z9
+rig[93]=5512500x3y22z30+1813612500xy18z36+281137500x6y44z3+1827393750x5y42z6-647718750x4y40z9-2306981250x3y38z12+1766756250x2y36z15-799312500xy34z18+1923862500y32z21-2571581250xy50+2207756250y48z3
+rig[94]=2756250x5y20z30-2559178125x9y44-1393284375x8y42z3+2195353125x7y40z6-2639109375x6y38z9-107493750x5y36z12+1088718750x4y34z15+2180193750x3y32z18-2455818750x2y30z21+938503125xy28z24-2542640625y26z27+2636353125x3y48+647718750x2y46z3-531956250xy44z6+759346875y42z9
+rig[95]=x11y44+1393284375x10y42z3-1577953125x9y40z6+2639109375x8y38z9-1088718750x6y34z15-2444793750x5y32z18+2455818750x4y30z21-938503125x3y28z24+2542640625x2y26z27+6890625xy24z30-1378125y22z33-2639798435x5y48-647029688x4y46z3+531956250x3y44z6-759346875x2y42z9-136434375xy40z12+1156246875y38z15
+rig[96]=5512500x3y20z33+1813612500x2y18z36+1408443750x5y40z9+1568306250x3y36z15-837900000x2y34z18+2221537500xy32z21+633937500y30z24-1959693750x2y50+2072700000xy48z3+2599143750y46z6
+rig[97]=2756250x4y28z24+1047375000xy22z33-2290443750y20z36+2647378125x6y48-2211890625x5y46z3-187425000x4y44z6-1306462500x3y42z9+238415625x2y40z12+1635834375xy38z15-474075000y36z18
+rig[98]=5512500xy20z36-1692337500y18z39+2750737500x5y44z6+1507668750x3y40z12+79931250xy36z18-1888031250xy52+377606250y50z3
+rig[99]=5512500x3y18z36+2306981250x5y38z12+1099743750x4y36z15-1455300000x2y32z21+90956250xy30z24+2654268750y28z27-2749359375x3y50-752456250x2y48z3+1914215625xy46z6+2491650000y44z9
+rig[100]=2756250x3y24z30-1066668750xy20z36-2549531250x6y46z3-1875628125x5y44z6+1230665625x4y42z9+175021875x3y40z12-643584375x2y38z15+1066668750xy36z18-327993750y34z21+831009375xy52-2424121875y50z3
+rig[101]=5512500x2y18z39+2695612500x5y40z12+1127306250x4y38z15-1628943750x3y36z18-970200000x2y34z21+531956250xy32z24+2654268750y30z27-861328125x3y52-2712150000x2y50z3+2054784375xy48z6+1849443750y46z9
+rig[102]=2756250x3y20z36-2559178125x9y48+1156246875x8y46z3-1047375000x6y42z9-2413096875x5y40z12-1660640625x4y38z15-1708875000x3y36z18+2149875000x2y34z21-2504053125xy32z24-1139709375y30z27+1820503125x3y52+1531096875x2y50z3-540225000xy48z6-2519212500y46z9
+rig[103]=5512500xy18z42-1284412500x6y44z9+314212500x5y42z12+1427737500x4y40z15-1424981250x3y38z18-658743750x2y36z21+1810856250xy34z24+2654268750y32z27-861328125x3y54-824118750x2y52z3+95090625xy50z6+1601381250y48z9
+rig[104]=2756250x2y24z36+1816368750y20z42-1193456250x6y48z6-581568750x5y46z9-2796215625x4y44z12-538846875x3y42z15-1079071875x2y40z18-2509565625xy38z21-474075000y36z24+2291821875x2y56+1066668750xy54z3-756590625y52z6
+rig[105]=5512500y18z45-1780537500x6y46z9-2805862500x4y42z15-1124550000x3y40z18-807581250x2y38z21+1019812500xy36z24+1595868750y34z27-662878125x3y56-2058918750x2y54z3+2313871875xy52z6+1047375000y50z9
+rig[106]=2756250xy20z42+2559178125x9y52-1156246875x8y50z3+2499918750x6y46z9-2152631250x5y44z12-85443750x4y42z15+2341434375x3y40z18+1798453125x2y38z21-2448928125xy36z24-1404309375y34z27+2313871875x3y56+1131440625x2y54z3-999140625xy52z6-1376746875y50z9
+rig[107]=2756250y20z48-2559178125x10y56+1156246875x9y54z3-438243750x2y40z24-1535231250xy38z27+2125068750x4y60+866840625x3y58z3+12403125x2y56z6-1719900000xy54z9+418950000y52z12
+> rig=j,g;
+> g;
+2822400000
+> rig;
+rig[1]=-3y2z2
+rig[2]=20xy3-2yz3
+rig[3]=y2z3
+rig[4]=10xy4
+rig[5]=6yz5
+rig[6]=xy3z2+2yz5
+rig[7]=14x6+5y4
+rig[8]=-2yz6
+rig[9]=2x7+5xy4
+rig[10]=-25y8
+rig[11]=14x5yz3+50y7
+rig[12]=5xy8
+rig[13]=2x6y3+4x5yz3+15y7
+rig[14]=2x6yz3
+rig[15]=y8z2
+rig[16]=x6y2z2-5y6z2
+rig[17]=-2x5yz5-5y7z2
+rig[18]=x6y8-30y12
+rig[19]=2822400000
+> rig=stdZ(rig);
+> rig;
+rig[1]=2822400000
+rig[2]=282240000yz3
+rig[3]=3y2z2
+rig[4]=201600000y4
+rig[5]=20xy3-2yz3
+rig[6]=y2z3
+rig[7]=10xy4
+rig[8]=6yz5
+rig[9]=xy3z2+2yz5
+rig[10]=14x6+5y4
+rig[11]=2yz6
+rig[12]=2x7+5xy4
+rig[13]=25y8
+rig[14]=14x5yz3+50y7
+rig[15]=5xy8
+rig[16]=2x6y3+4x5yz3+15y7
+rig[17]=2x6yz3
+rig[18]=y8z2
+rig[19]=x6y2z2-5y6z2
+rig[20]=2x5yz5+5y7z2
+rig[21]=x6y8-30y12
+> i;
+i[1]=2x7+5xy4-y2z3
+> j;
+j[1]=-3y2z2
+j[2]=20xy3-2yz3
+j[3]=y2z3
+j[4]=10xy4
+j[5]=6yz5
+j[6]=xy3z2+2yz5
+j[7]=14x6+5y4
+j[8]=-2yz6
+j[9]=2x7+5xy4
+j[10]=-25y8
+j[11]=14x5yz3+50y7
+j[12]=5xy8
+j[13]=2x6y3+4x5yz3+15y7
+j[14]=2x6yz3
+j[15]=y8z2
+j[16]=x6y2z2-5y6z2
+j[17]=-2x5yz5-5y7z2
+j[18]=x6y8-30y12
+> "andere Ordnung";
+andere Ordnung
+> ring rls=integer,(x,y,z),ls;
+> ideal i=fetch(r,i);
+> i;
+i[1]=-y2z3+5xy4+2x7
+> ideal j=minor(jacob(i),1),1;
+> j;
+j[1]=5y4+14x6
+j[2]=-2yz3+20xy3
+j[3]=-3y2z2
+j[4]=1
+> ideal j=minor(jacob(i),1),i;
+// ** redefining j **
+> j;
+j[1]=5y4+14x6
+j[2]=-2yz3+20xy3
+j[3]=-3y2z2
+j[4]=-y2z3+5xy4+2x7
+> "zum Vergleich:j[1]=14x6+5y4
+j[2]=20xy3-2yz3
+j[3]=-3y2z2
+j[4]=2x7+5xy4-y2z3";
+zum Vergleich:j[1]=14x6+5y4
+j[2]=20xy3-2yz3
+j[3]=-3y2z2
+j[4]=2x7+5xy4-y2z3
+> j=std(j);
+> j;
+j[1]=-2yz3+20xy3
+j[2]=y2z2
+j[3]=5y4+14x6
+j[4]=14x6z2
+j[5]=4x7
+j[6]=2x7z2
+j[7]=x7y4+14x13
+> ideal e=eliminate(j,xyz);
+> e;
+e[1]=0
+> int k;
+// ** redefining k **
+> for(k=1; k<= size(j); k++)
+	{
+	   g = g*leadcoef(j[k]);
+	};
+   ? `g` is undefined
+   ? error occurred in or before STDIN line 4577: `	   g = g*leadcoef(j[k]);`
+> poly g=1;
+> for(k=1; k<= size(j); k++)
+	{
+	   g = g*leadcoef(j[k]);
+	};
+> g;
+-1120
+> ideal rig=j,g;
+> rig;
+rig[1]=-2yz3+20xy3
+rig[2]=y2z2
+rig[3]=5y4+14x6
+rig[4]=14x6z2
+rig[5]=4x7
+rig[6]=2x7z2
+rig[7]=x7y4+14x13
+rig[8]=-1120
+> rig=std(rig);
+> rig;
+rig[1]=1
+> myradical(j);
+_[1]=y
+_[2]=x
+> help;
+// ** Displaying help in browser 'emacs'.
+// ** Use 'system("--browser", <browser>);' to change browser,
+// ** where <browser> can be: "htmlview", "firefox", "xinfo", "info", "builtin", "dummy", "emacs".
+> radicalZ(j);
+   ? pNorm not possible in the case of coefficient rings.
+   ? pNorm not possible in the case of coefficient rings.
+   ? pNorm not possible in the case of coefficient rings.
+   ? pNorm not possible in the case of coefficient rings.
+   ? pNorm not possible in the case of coefficient rings.
+   ? error occurred in or before primdecint.lib::coefZ line 1026: `continue;`
+   ? leaving primdecint.lib::coefZ
+   skipping text from `;` error at token `)`
+   ? leaving primdecint.lib::radicalZ
+> j;
+j[1]=-2yz3+20xy3
+j[2]=y2z2
+j[3]=5y4+14x6
+j[4]=14x6z2
+j[5]=4x7
+j[6]=2x7z2
+j[7]=x7y4+14x13
+> setring r;
+> j;
+j[1]=-3y2z2
+j[2]=20xy3-2yz3
+j[3]=y2z3
+j[4]=10xy4
+j[5]=6yz5
+j[6]=xy3z2+2yz5
+j[7]=14x6+5y4
+j[8]=-2yz6
+j[9]=2x7+5xy4
+j[10]=-25y8
+j[11]=14x5yz3+50y7
+j[12]=5xy8
+j[13]=2x6y3+4x5yz3+15y7
+j[14]=2x6yz3
+j[15]=y8z2
+j[16]=x6y2z2-5y6z2
+j[17]=-2x5yz5-5y7z2
+j[18]=x6y8-30y12
+> radicalZ(j);
+_[1]=5y
+_[2]=2x
+_[3]=yz
+_[4]=xy
+> myradical(j);
+   ? `int`(k) = `bigint` is not supported
+   ? expected `int` = `int`
+   ? expected `int` = `intmat`
+   ? error occurred in or before ::myradical line 18: `int k=2822400000;`
+   ? expected int-expression. type 'help int;'
+   ? leaving ::myradical
+   skipping text from `;` error at token `)`
+   ? leaving ::myradical
+. ;
+> setring rlp;
+   ? rlp is no name of a ring/qring
+   ? error occurred in or before STDIN line 4604: `setring rlp;`
+> setring rls;
+> i;
+i[1]=-y2z3+5xy4+2x7
+> ideal j=minor(jacob(i),1),i;
+// ** redefining j **
+> j;
+j[1]=5y4+14x6
+j[2]=-2yz3+20xy3
+j[3]=-3y2z2
+j[4]=-y2z3+5xy4+2x7
+> myradical(j);
+_[1]=y
+_[2]=x
+> ring rlp=integer,(x,y,z),lp;
+> ideal i=fetch(,i);
+   ? error occurred in or before STDIN line 4611: `ideal i=fetch(,i);`
+   ? expected ideal-expression. type 'help ideal;'
+   ? last reserved name was `fetch`
+   skipping text from `i` error at token `)`
+> ideal i=fetch(r,i);
+> i;
+i[1]=2x7+5xy4-y2z3
+> ideal j=minor(jacob(i),1),i;
+> j;
+j[1]=14x6+5y4
+j[2]=20xy3-2yz3
+j[3]=-3y2z2
+j[4]=2x7+5xy4-y2z3
+> j=std(j);
+> j;
+j[1]=6yz5
+j[2]=-2yz6
+j[3]=-3y2z2
+j[4]=y2z3
+j[5]=25y8
+j[6]=y8z2
+j[7]=20xy3-2yz3
+j[8]=xy3z2+2yz5
+j[9]=10xy4
+j[10]=5xy8
+j[11]=14x5yz3+50y7
+j[12]=-2x5yz5-5y7z2
+j[13]=14x6+5y4
+j[14]=2x6yz3
+j[15]=x6y2z2-5y6z2
+j[16]=2x6y3+4x5yz3+15y7
+j[17]=x6y8-30y12
+j[18]=2x7+5xy4
+> myradical(j);
+   ? `int`(k) = `bigint` is not supported
+   ? expected `int` = `int`
+   ? expected `int` = `intmat`
+   ? error occurred in or before ::myradical line 18: `int k=2822400000;`
+   ? expected int-expression. type 'help int;'
+   ? leaving ::myradical
+   skipping text from `;` error at token `)`
+   ? leaving ::myradical
+. ;
+> radicalZ(j);
+_[1]=5y
+_[2]=2x
+_[3]=yz
+_[4]=xy
+> exit;
+

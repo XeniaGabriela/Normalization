@@ -1,0 +1,68 @@
+      
+Beispiel für "mysat(ideal i, poly f)":
+   \
+> ring r=integer,(x,y,z),dp;
+> ideal I=6xy,x2z,4y;
+> std(I);
+_[1]=4y
+_[2]=2xy
+_[3]=x2z
+> poly f=x;
+> proc mysat(ideal i, poly f)                                                  // computes the saturation of an ideal i over any ring 
+{                                                                              // w.r.t. a poly f by mapping them to the polynomial  
+	def BAS = basering	;                                              // ring over the ring of integers plus one new variable T,
+	ring newR = integer,(X(1..nvars(BAS)),T),dp ;                          // compute the ideal Q=(psi(i),1-T*psi(f)),eliminate T 
+	map psi=BAS,maxideal(1)				 ;                     // from Q and then mapping it back to the basering.
+	ideal Q=psi(i),1-T*psi(f)			 ;
+	Q=std(Q)					 ;
+	ideal e=eliminate(Q,T)				 ;
+	setring BAS					 ;
+	ideal result=fetch(newR,e)			 ;
+	return(result)					 ;
+};
+> mysat(I,f);
+_[1]=z
+_[2]=2y
+
+Schritt für Schritt:
+
+> def BAS = basering	; 
+> ring newR = integer,(X(1..nvars(BAS)),T),dp ;
+> map psi=BAS,maxideal(1);
+> ideal Q=psi(I),1-T*psi(f);
+> Q;
+Q[1]=6*X(1)*X(2)
+Q[2]=X(1)^2*X(3)
+Q[3]=4*X(2)
+Q[4]=-X(1)*T+1
+> Q=std(Q);
+> ideal e=eliminate(Q,T);
+> e;
+e[1]=X(3)
+e[2]=2*X(2)
+> setring BAS;
+> ideal result=fetch(newR,e);
+> result;
+result[1]=z
+result[2]=2y
+
+Zum Vergleich:
+
+> LIB "elim.lib";
+// ** loaded /usr/share/Singular/LIB/elim.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/ring.lib (12231,2009-11-02)
+// ** loaded /usr/share/Singular/LIB/primdec.lib (13403,2010-10-06)
+// ** loaded /usr/share/Singular/LIB/absfact.lib (13534,2010-10-18)
+// ** loaded /usr/share/Singular/LIB/triang.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/matrix.lib (12898,2010-06-23)
+// ** loaded /usr/share/Singular/LIB/nctools.lib (13467,2010-10-13)
+// ** loaded /usr/share/Singular/LIB/random.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/poly.lib (12443,2010-01-19)
+// ** loaded /usr/share/Singular/LIB/general.lib (13499,2010-10-15)
+// ** loaded /usr/share/Singular/LIB/inout.lib (13499,2010-10-15)
+> sat(I,f);
+[1]:
+   _[1]=z
+   _[2]=4y
+[2]:
+   2

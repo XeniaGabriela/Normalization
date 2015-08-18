@@ -1,0 +1,41 @@
+
+ . .4 myquotient
+----------------
+
+*Syntax:*
+     `myquotient (' ideal_expression`,' ideal_expression `, ' ideal_expression `)'
+     
+
+*Type:*
+     ideal
+
+
+*Purpose:*
+     computes the ideal quotient in the basering modulo the first argument.
+     Returns a standard base of the quotient ideal.
+     Let `R' be the basering, `I,J' ideals and `M' a module in R^n.  Then
+         `quotient(i,j1,j2)'= {a in R/i | a*j2 in j1}
+
+*Example:*
+       LIB "normalint.lib";
+       ring  r=integer,(u,v,w),dp;
+       ideal i=u;
+       ideal j1=4u,12w,3v;
+       ideal j2=4,u;
+       ideal mq=myquotient(i,j1,j2);
+       ==> mq[1]=3w
+       ==> mq[2]=3v
+       ==> mq[3]=u
+   //--- (12w:u)=(12w:0)=r in r/i 
+       qring q=std(i);
+   //--- look at the quotient ideal in the qring
+       ideal myq=imap(r,myq);
+       myq=reduce(myq,std(0));
+       reduce(myq,std(0));
+       ==> _[1]=3w
+       ==> _[2]=3v
+       ==> _[3]=0
+   //--- reduction is not immediate
+           
+* Menu:
+

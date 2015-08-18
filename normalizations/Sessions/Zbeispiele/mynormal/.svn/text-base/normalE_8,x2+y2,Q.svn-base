@@ -1,0 +1,55 @@
+
+> ring r=0,(x,y,z),dp;
+> LIB "normal.lib";
+> ideal i=x2+y2;
+> list n=normal(i);
+> n;
+[1]:
+   [1]:
+      //   characteristic : 0
+//   number of vars : 4
+//        block   1 : ordering dp
+//                  : names    T(1)
+//        block   2 : ordering dp
+//                  : names    x y z
+//        block   3 : ordering C
+[2]:
+   [1]:
+      _[1]=x
+      _[2]=y
+
+> def R1=n[1][1];
+> setring R1;
+> norid;
+norid[1]=-T(1)*y+x
+norid[2]=T(1)*x+y
+norid[3]=T(1)^2+1
+norid[4]=x^2+y^2
+
+
+
+> setring r;
+> ideal j=x3+y5+z2;
+> list nor=normal(j);
+> nor;
+[1]:
+   [1]:
+      //   characteristic : 0
+//   number of vars : 3
+//        block   1 : ordering dp
+//                  : names    x y z
+//        block   2 : ordering C
+[2]:
+   [1]:
+      _[1]=1
+
+> def R2=nor[1][1];
+> setring R2;
+> norid;
+norid[1]=y5+x3+z2
+> normap;
+normap[1]=x
+normap[2]=y
+normap[3]=z
+
+

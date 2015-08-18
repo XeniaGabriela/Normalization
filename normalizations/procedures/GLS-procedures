@@ -1,0 +1,1495 @@
+﻿proc normalZGLS(ideal id, list #)
+{
+  intvec opt = option(get);     // Save current options
+
+  int i,j;
+  int decomp;   // Preliminary decomposition:
+                // 0 -> no decomposition (id is assumed to be prime)
+                // 1 -> no decomposition
+                //      (id is assumed to be equidimensional radical)
+                // 2 -> equidimensional decomposition
+                // 3 -> minimal associated primes
+  int useRing, withDelta;
+  int dbg = printlevel - voice + 2;
+  int nvar = nvars(basering);
+  int chara  = char(basering);
+  int denomOption;   // Method for choosing the conductor
+
+  ideal inputJ = 0;      // Test ideal given in the input (if any).
+  ideal inputC = 0;      // Conductor ideal given in the input (if any).
+
+  list result, resultNew;
+  list keepresult;
+  list ringStruc;
+  ideal U;
+  poly c;
+  int sp;            // Number of components.
+
+// Default methods:
+  decomp = 2;        // Equidimensional decomposition
+  useRing = 0;       // Change first to dp ordering, and perform all
+                     // computations there.
+  withDelta = 0;     // Do not compute the delta invariant.
+  denomOption = 0;   // The default universal denominator is the smallest
+                     // degree polynomial.
+
+//--------------------------- define the method ---------------------------
+  for ( i=1; i <= size(#); i++ )
+  {
+    if ( typeof(#[i]) == "string" )
+    {
+//--------------------------- choosen methods -----------------------
+      if ( (#[i]=="isprim") or (#[i]=="isPrim") )
+      {decomp = 0;}
+
+      if ( (#[i]=="nodeco") or (#[i]=="noDeco") )
+      {decomp = 1;}
+
+      if (#[i]=="prim")
+      {decomp = 3;}
+
+      if (#[i]=="equidimension")
+      {decomp = 2;}
+
+      if ( ((#[i]=="useRing") or (#[i]=="usering")) and (ordstr(basering) != "dp("+string(nvars(basering))+"),C"))
+      {useRing = 1;}
+
+      if ( (#[i]=="withDelta") or (#[i]=="wd") or (#[i]=="withdelta"))
+      {
+        if((decomp == 0) or (decomp == 3))
+        {
+          withDelta = 1;
+        }
+        else
+        {
+          decomp = 3;
+          withDelta = 1;
+         //--- Note: the delta invariants cannot be computed with an equidimensional
+         //--- decomposition, hence we compute first the minimal primes
+        }
+      }
+      if (#[i]=="var1")
+      {denomOption = 1;}
+      if (#[i]=="var2")
+      {denomOption = 2;}
+    }
+    if(typeof(#[i]) == "list")
+    {
+      if(size(#[i]) == 2)
+      {
+        if (#[i][1]=="inputJ")
+        {
+          if(typeof(#[i][2]) == "ideal")
+          {
+            inputJ = #[i][2];
+          }
+        }
+      }
+      if (#[i][1]=="inputC")
+      {
+        if(size(#[i]) == 2)
+        {
+          if(typeof(#[i][2]) == "ideal")
+          {
+            inputC = #[i][2];
+          }
+        }
+      }
+    }
+  }
+  kill #;
+
+//-------------------------- change ring if required --------------------------
+//--- If the ordering is not global, we change to dp ordering for computing the
+//--- min ass primes. If the ordering is global, but not dp, and useRing = 0,
+//--- we also change to dp ordering.
+
+  int isGlobal = ord_test(basering);      
+//--- Checks if the original ring has global ordering.
+
+  def origR = basering;   
+//--- origR is the original ring R is the ring where computations will be done
+
+  if((useRing  == 1) and (isGlobal == 1))
+  {
+    def globR = basering;
+  }
+  else
+  {
+ //--- We change to dp ordering.
+    list rl = ringlist(origR);
+    list origOrd = rl[3];
+    list newOrd = list("dp", intvec(1:nvars(origR))), list("C", 0);
+    rl[3] = newOrd;
+    def globR = ring(rl);
+    setring globR;
+    ideal id = fetch(origR, id);
+  }
+
+//------------------------ trivial checkings ------------------------
+  id = std(id);
+  if((size(id) == 0) or (id[1] == 1))
+  {
+    // The original ring R/I was normal. Nothing to do.
+    // We define anyway a new ring, equal to R, to be able to return it.
+    setring origR;
+    list lR = ringlist(origR);
+    def ROut = ring(lR);
+    setring ROut;
+    ideal norid = fetch(origR, id);
+    ideal normap = maxideal(1);
+    export norid;
+    export normap;
+    setring origR;
+    if(withDelta)
+    {
+      result = list(list(ROut), list(ideal(1)), list(intvec(0), 0));
+    }
+    else
+    {
+      result = list(list(ROut), list(ideal(1)));
+    }
+    sp = 1;      // number of rings in the output
+    option(set, opt);
+    return(result);
+  }
+//------------------------ preliminary decomposition-------------------------
+  list prim;
+  if(decomp == 2)
+  {
+    dbprint(dbg, "// Computing the equidimensional decomposition...");
+    prim = equidimZ(id);                                      
+  }
+  if((decomp == 0) or (decomp == 1))
+  {
+    prim = id;
+  }
+  if(decomp == 3)
+  {
+    dbprint(dbg, "// Computing the minimal associated primes...");
+    prim = minAssZ(id); 
+  }
+  sp = size(prim);
+  if(dbg>=1)
+  {
+    prim; "";
+    "// number of components is", sp;
+    "";
+  }
+
+
+//------------------- back to the original ring if required ------------------
+//--- if ring was not global and useRing is on, we go back to the original ring
+  if((useRing == 1) and (isGlobal != 1))
+  {
+    setring origR;
+    def R = basering;
+    list prim = fetch(globR, prim);
+  }
+  else
+  {
+    def R = basering;
+    ideal inputJ = fetch(origR, inputJ);
+    ideal inputC = fetch(origR, inputC);
+    if(useRing == 0)
+    {
+      ideal U;
+      poly c;
+    }
+  }
+
+// ---------------- normalization of the components-------------------------
+// calls normalMZ to compute the normalization of each component.
+
+  list norComp;       
+//--- The normalization of each component.
+  int delt;
+  int deltI = 0;
+  int totalComps = 0;
+
+  setring origR;
+  def newROrigOrd;
+  list newRListO;
+  setring R;
+  def newR;
+  list newRList;
+
+  for(i=1; i<=size(prim); i++)
+  {
+    if(dbg>=2){pause();}
+    if(dbg>=1)
+    {
+      "// start computation of component",i;
+      "   --------------------------------";
+    }
+    if(std(prim[i])[1] != 1)
+    {
+      if(dbg>=2)
+      {
+        "We compute the normalization in the ring"; basering;
+      }
+      printlevel = printlevel + 1;
+      norComp = normalMZ(prim[i], decomp, withDelta, denomOption, inputJ, inputC);
+      printlevel = printlevel - 1;
+      for(j = 1; j <= size(norComp); j++)
+      {
+        newR = norComp[j][3];
+        newRList = ringlist(newR);
+        U = norComp[j][1];
+        c = norComp[j][2];
+        if(withDelta)
+        {
+          delt = norComp[j][4];
+          if((delt >= 0) and (deltI >= 0))
+          {
+            deltI = deltI + delt;
+          }
+          else
+          {
+            deltI = -1;
+          }
+        }
+//--------- incorporate result for this component to the list of results -----------
+        if(useRing == 0)
+        {
+       //--- We go back to the original ring.
+          setring origR;
+          U = fetch(R, U);
+          c = fetch(R, c);
+          newRListO = imap(R, newRList);
+       //--- We change the ordering in the new ring.
+          if(nvars(newR) > nvars(origR))
+          {
+            newRListO[3] = insert(origOrd, newRListO[3][1]);
+          }
+          else
+          {
+            newRListO[3] = origOrd;
+          }
+          newROrigOrd = ring(newRListO);
+          setring newROrigOrd;
+          ideal norid = imap(newR, norid);
+          ideal normap = imap(newR, normap);
+          export norid;
+          export normap;
+          setring origR;
+          totalComps++;
+          result[totalComps] = list(U, c, newROrigOrd);
+          if(withDelta)
+          {
+            result[totalComps] = insert(result[totalComps], delt, 3);
+          }
+          setring R;
+        }
+        else
+        {
+          setring R;
+          totalComps++;
+          result[totalComps] = norComp[j];
+        }
+      }
+    }
+  }
+
+// -------------------------- delta computation ----------------------------
+  if(withDelta == 1)
+  {
+  //--- Intersection multiplicities of list prim, sp=size(prim).
+    if ( dbg >= 1 )
+    {
+      "// Sum of delta for all components: ", deltI;
+    }
+    if(size(prim) > 1)
+    {
+      dbprint(dbg, "// Computing the sum of the intersection multiplicities of the components...");
+      int mul = iMult(prim);
+      if ( mul < 0 )
+      {
+        deltI = -1;
+      }
+      else
+      {
+        deltI = deltI + mul;
+      }
+      if ( dbg >= 1 )
+      {
+        "// Intersection multiplicity is : ", mul;
+      }
+    }
+  }
+
+// -------------------------- prepare output ------------------------------
+  setring origR;
+
+  list RL;      //--- list of rings
+  list MG;      //--- module generators
+  intvec DV;    //--- vector of delta's of each component
+  for(i = 1; i <= size(result); i++)
+  {
+    RL[i] = result[i][3];
+    MG[i] = lineUpLast(result[i][1], result[i][2]);
+    if(withDelta)
+    {
+      DV[i] = result[i][4];
+    }
+  }
+  if(withDelta)
+  {
+    resultNew = list(RL, MG, list(DV, deltI));
+  }
+  else
+  {
+    resultNew = list(RL, MG);
+  }
+  sp = size(RL);             
+  option(set, opt);
+  return(resultNew);
+}
+
+proc computeRing(ideal J, ideal I, list #)
+{
+  int i, ii,jj;
+  intvec V;                          //--- to be used for variable weights
+  int y = printlevel-voice+2;
+  def R = basering;
+  poly c = J[1];                     //--- the denominator
+  list gnirlist = ringlist(basering);
+  string svars = varstr(basering);
+  int nva = nvars(basering);
+  string svar;
+  ideal maxid = maxideal(1);
+
+  int noRed = 0;     
+//--- By default, we try to reduce the number of generators.
+  if(size(#) > 0){
+    if ( typeof(#[1]) == "string" )
+    {
+      if (#[1] == "noRed"){noRed = 1;}
+    }
+  }
+
+  if ( y >= 1){"// computing the ring structure...";}
+
+  if(c==1)
+  {
+/*  if( defined(norid) )  { kill norid; }
+    if( defined(normap) ) { kill normap; }
+    ideal norid = I;
+    ideal normap =  maxid;  */
+
+    list gnirlist = ringlist(R);
+    def R1 = ring(gnirlist);
+    setring R1;
+    ideal norid = imap(R, I);
+    ideal normap = imap(R, maxid);
+    export norid;
+    export normap;
+
+    if(noRed == 1)
+    {
+      setring R;
+      return(R1);
+    }
+    else
+    {
+      list L = elimvar(norid,normap);
+      def lastRing = L[1];
+      setring lastRing;
+      ideal norid = eli;
+      export(norid);
+      ideal normap = ephi;
+      export(normap);
+      setring R;
+      return(lastRing);
+    }
+  }
+
+//-------------- Enlarge ring by creating new variables ------------------
+//---check first whether variables T(i) and then whether Z(i),...,A(i) exist
+//---old variable names are not touched
+
+  if ( find(svars,"T(") == 0 )                                                   // "T(" könnte falsch sein wegen elimvar anstatt substpartspecial!
+  {
+    svar = "T";
+  }
+  else
+  {
+    for (ii=90; ii>=65; ii--)
+    {
+      if ( find(svars,ASCII(ii)+"(") == 0 )
+      {
+        svar = ASCII(ii);  break;
+      }
+    }
+  }
+
+  int q = size(J)-1;
+  if ( size(svar) != 0 )
+  {
+    for ( ii=q; ii>=1; ii-- )
+    {
+      gnirlist[2] = insert(gnirlist[2],svar+"("+string(ii)+")");
+    }
+  }
+  else
+  {
+    for ( ii=q; ii>=1; ii-- )
+    {
+      gnirlist[2] = insert(gnirlist[2],"T("+string(100*nva+ii)+")");
+    }
+  }
+
+  V[q]=0;                        
+//---create intvec of variable weights
+  V=V+1;
+  gnirlist[3] = insert(gnirlist[3],list("dp",V));
+
+//---this is a block ordering with one dp-block (1st block) for new vars
+//---the remaining weights and blocks for old vars are kept
+//---### perhaps better to make only one block, keeping weights ?
+//---this might effect syz below
+//---alt: ring newR = char(R),(X(1..nvars(R)),T(1..q)),dp;
+//---Reihenfolge geaendert:neue Variablen kommen zuerst, Namen ev. nicht T(i)
+
+  def newR = ring(gnirlist);
+  setring newR;                
+//---new extended ring
+  ideal I = imap(R,I);
+
+//------------------ Compute linear and quadratic relations --------------------
+  if(y>=1)
+  {
+     "// compute linear relations:";
+  }
+  qring newQ = std(I);
+
+  ideal f = imap(R,J);
+  module syzf = syz(f);
+  ideal pf = f[1]*f;
+//---f[1] is the denominator D from normalityTest, a non zero divisor of R/I
+
+  ideal newT = maxideal(1);
+  newT = 1,newT[1..q];
+//---matrix T = matrix(ideal(1,T(1..q)),1,q+1);   //alt
+  matrix T = matrix(newT,1,q+1);
+  ideal Lin = ideal(T*syzf);
+//---Lin=interred(Lin);
+//---### interred reduziert ev size aber size(string(LIN)) wird groesser
+
+  if(y>=1)
+  {
+    if(y>=3)
+    {
+      "//   the linear relations:";  Lin; pause();"";
+    }
+      "// the ring structure of the normalization as affine algebra";
+      "//   number of linear relations:", size(Lin);
+  }
+
+  if(y>=1)
+  {
+    "// compute quadratic relations:";
+  }
+  matrix A;
+  ideal Quad;
+  poly ff;
+  newT = newT[2..size(newT)];
+  matrix u;  // The units for non-global orderings.
+
+//---Quadratic relations
+  for (ii=2; ii<=q+1; ii++ )
+  {                                                                         //LIFT SIGN CHECKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+    for ( jj=2; jj<=ii; jj++ )
+    {
+      ff = NF(f[ii]*f[jj],std(0));     
+     //--- this makes lift much faster
+     //--- For non-global orderings, we have to take care of the units.
+      if(ord_test(basering) != 1)
+      {
+        A = lift(pf, ff, u);
+        Quad = Quad,ideal(newT[jj-1]*newT[ii-1] * u[1, 1]- T*A);
+      }
+      else
+      {
+        A = lift(pf,ff);              
+     //---ff lin. comb. of elts of pf mod I
+        Quad = Quad,ideal(newT[jj-1]*newT[ii-1] - T*A);
+      }
+     //---A = lift(pf, f[ii]*f[jj]);
+     //---Quad = Quad, ideal(T(jj-1)*T(ii-1) - T*A);
+    }
+  }
+  Quad = Quad[2..ncols(Quad)];
+
+  if(y>=1)
+  {
+    if(y>=3)
+    {
+      "//   the quadratic relations"; Quad; pause();"";
+    }
+      "//   number of quadratic relations:", size(Quad);
+  }
+  ideal Q1 = Lin,Quad;     
+//---elements of Q1 are in NF w.r.t. I
+  setring newR;
+  ideal endid  = imap(newQ,Q1),I;
+  ideal endphi = imap(R,maxid);
+
+  if(noRed == 0)
+  {
+    list L=elimvar(endid,endphi);
+    def lastRing=L[1];
+    if(y>=1)
+    {
+      "//   number of substituted variables:", nvars(newR)-nvars(lastRing);
+      pause();"";
+    }
+    return(lastRing);
+  }
+  else
+  {
+    ideal norid = endid;
+    ideal normap = endphi;
+    export(norid);
+    export(normap);
+    setring R;
+    return(newR);
+  }
+}
+
+
+
+proc getGeneratorsZ(ideal J, ideal U, poly c)
+{
+//--- Computes the generators of J as an ideal in the original quotient-ring r/i,
+//--- where J is given by generators in the new ring.
+//--- The new ring is given by 1/c * U (U = myquotient(i,p*j,j)) in the total ring of fractions.
+
+  int i, j;                             
+  int dbg = printlevel - voice + 2;     // dbg = printlevel (default: dbg = 0)
+  poly p;                               // The lifted polynomial
+  ideal Jstd = std(J);                  // standard base of J
+
+  if(dbg>1){"Checking for new generators...";}
+  for(i = 1; i <= ncols(J); i++)
+  {
+    for(j = 1; j <= ncols(U); j++)
+    {
+      p = lift(c, J[i]*U[j])[1,1];
+      p = reduce(p, Jstd);
+      if(p != 0)
+      {
+        if(dbg>1)
+        {
+          "New polynomial added:", p;
+          if(dbg>4) {pause();}
+        }
+        Jstd = Jstd, p;
+        Jstd = std(Jstd);
+        J = J, p;
+      }
+    }
+  }
+  return(J);
+}
+
+proc iMult (list prim)
+{    int i,mul,mu;
+     int sp = size(prim);
+     int y = printlevel-voice+2;
+     if ( sp > 1 )
+     {
+        ideal I(sp-1) = prim[sp];
+        mu = vdim(std(I(sp-1)+prim[sp-1]));
+        mul = mu;
+        if ( y>=1 )
+        {
+          "// intersection multiplicity of component",sp,"with",sp-1,":"; mu;
+        }
+        if ( mu >= 0 )
+        {
+           for (i=sp-2; i>=1 ; i--)
+           {
+              ideal I(i) = intersect(I(i+1),prim[i+1]);
+              mu = vdim(std(I(i)+prim[i]));              //// CHECK FOR IDEALS WITH INTEGERS!!!!
+              if ( mu < 0 )
+              {
+                break;
+              }
+              mul = mul + mu;
+              if ( y>=1 )
+              {
+                "// intersection multiplicity of components",sp,"...",i+1,"with",i; mu;
+              }
+           }
+        }
+     }
+     return(mul);
+}
+
+proc locAtZero (ideal I)
+{
+   int ii,jj, caz;                   //caz: conzentrated at zero
+   int dbp = printlevel-voice+2;
+   int nva = nvars(basering);
+   int vdi = vdim(I);
+   if ( vdi < 0 )
+   {
+      if (dbp >=1)
+      { "// non-isolated singularitiy";""; }
+      return(caz);
+   }
+
+//---Now the ideal is 0-dim, first an easy test
+//---If I is homogenous and not constant it is concentrated at 0
+   if( homog(I)==1 && size(jet(I,0))==0)
+   {
+      caz=1;
+      if (dbp >=1)
+      { "// isolated singularity and homogeneous";""; }
+      return(caz);
+   }
+
+//---Now the general case with I 0-dim. Choose an appropriate power pot,
+//---and check each variable x whether x^pot is in I.
+   int mi1 = mindeg1(lead(I));
+   int pot = vdi;
+   if ( (mi1+(mi1==1))^2 < vdi )
+   {
+      pot = (mi1+(mi1==1))^2;      //### alternativ: pot = vdi lassen
+   }
+
+   while ( 1 )
+   {
+      caz = 1;
+      for ( ii=1; ii<= nva; ii++ )
+      {
+        if ( NF(var(ii)^pot,I) != 0 )
+        {
+           caz = 0; break;
+        }
+      }
+      if ( caz == 1 || pot >= vdi )
+      {
+        if (dbp >=1)
+        {
+          "// mindeg, exponent, vdim used in 'locAtZero':", mi1,pot,vdi; "";
+        }
+        return(caz);
+      }
+      else
+      {
+        if ( pot^2 < vdi )
+        { pot = pot^2; }
+        else
+        { pot = vdi; }
+      }
+   }
+}
+
+proc normalMZ(ideal I, int decomp, int withDelta, int denomOption, ideal inputJ, ideal inputC)
+{
+// Computes the normalization of a ring R / I using the module structure as far
+// as possible.
+// The ring R is the basering.
+// Input: ideal I
+// Output: a list of 3 elements (resp 4 if withDelta = 1), say nor.
+// - nor[1] = U, an ideal of R.
+// - nor[2] = c, an element of R.
+// U and c satisfy that 1/c * U is the normalization of R / I in the
+// quotient field Q(R/I).
+// - nor[3] = ring say T, containing two ideals norid and normap such that
+// normap gives the normalization map from R / I to T / norid.
+// - nor[4] = the delta invariant, if withDelta = 1.
+
+// Details:
+// --------
+// Computes the ideal of the minors in the first step and then reuses it in all
+// steps.
+// In step s, the denominator is D^s, where D is a nzd of the original quotient
+// ring, contained in the radical of the singular locus.
+// This denominator is used except when the degree of D^i is greater than the
+// degree of a universal denominator.
+// The nzd is taken as the smallest degree polynomial in the radical of the
+// singular locus.
+
+// It assumes that the ideal I is equidimensionsional radical. This is not checked
+// in the procedure!
+// If decomp = 0 or decomp = 3 it assumes further that I is prime. Therefore
+// any non-zero element in the jacobian ideal is assumed to be a
+// non-zerodivisor.
+
+// It works over the given basering.
+// If it has a non-global ordering, it changes it to dp global only for
+// computing radical.
+
+// The delta invariant is only computed if withDelta = 1, and decomp = 0 or
+// decomp = 3 (meaning that the ideal is prime).
+
+// denomOption = 0      -> Uses the smallest degree polynomial
+// denomOption = i > 0  -> Uses a polynomial in the i-th variable
+
+  option("redSB");
+  option("returnSB");
+  int step = 0;                       //--- Number of steps. (for debugging)
+  int dbg = printlevel - voice + 2;   //--- dbg = printlevel (default: dbg = 0)
+  int i;                              //--- counter
+  int isGlobal = ord_test(basering);
+
+  poly c;                     //--- The common denominator.
+  poly condu,D;
+  ideal Id1;
+
+  def R = basering;
+
+//------------------------ standard bases and dimension of I --------------------
+
+  I = std(I);
+  int ht = myheight(I);
+
+// -------------- computation of the test ideal in the Qring --------------------
+
+ //--- We compute the radical of the ideal of minors modulo the original ideal.
+ //--- This is done only in the first step.
+  qring Q = I;   
+  poly condu;
+ //--- We work in the quotient by the std base of the ideal I
+  option("redSB");
+  option("returnSB");
+
+ //--- If a conductor ideal was given as input, we use it instead of the
+ //--- test ideal. If a test ideal was given as input, we do not compute it
+  ideal inputC = fetch(R, inputC);
+  ideal inputJ = fetch(R, inputJ);
+  if((inputC == 0) && (inputJ == 0))
+  {
+  //--- We compute the radical of the ideal of minors modulo the original ideal.
+  //--- This is done only in the first step.
+     ideal I = fetch(R, I);
+     attrib(I, "isSB", 1);
+     dbprint(dbg, "Computing the jacobian ideal...");
+  //--- If a conductor ideal is given, we use it.
+  //--- If a test ideal is given, we don't need to compute the jacobian
+     ideal J = minor(jacob(I), ht, I);
+     J = std(J);
+     int kk;
+     for(kk=1; kk <= size(J); kk++)
+     {
+        if(leadcoef(J[kk]) < 0)
+        {
+           J[kk] = -J[kk];
+        }
+     }
+  } 
+  else 
+  {
+    ideal J = fetch(R, inputC);
+    J = std(J);
+  }
+
+//------------------ We check if the singular locus is empty -------------
+  if(J[1] == 1)
+  {
+  //--- The original ring R/I was normal. Nothing to do.
+  //--- We define anyway a new ring, equal to R, to be able to return it.
+     setring R;
+     list lR = ringlist(R);
+     def ROut = ring(lR);
+     setring ROut;
+     ideal norid = fetch(R, I);
+     ideal normap = maxideal(1);
+     export norid;
+     export normap;
+     setring R;
+     if(withDelta)
+     {
+        list output = ideal(1), poly(1), ROut, 0;
+     }
+     else
+     {
+        list output = ideal(1), poly(1), ROut;
+     }
+     return(list(output));
+  }
+
+
+// ----------------------- election of the universal denominator-------------------
+  //--- We first check if a conductor ideal was computed. If not, we don't
+  //--- compute a universal denominator.
+  
+  if(J != 0)
+  {
+     if(denomOption == 0)
+     {
+       condu = getSmallestZ(J);   
+    //--- Choses the polynomial of smallest degre of J as universal denominator.
+     } 
+     else 
+     {
+       condu = getOneVar(J, denomOption);
+     }
+     if(dbg >= 1)
+     {
+      "";
+      "The universal denominator is ", condu;
+     }
+
+// -------- splitting the ideal by the universal denominator (if possible) ----------
+
+  //--- If the ideal is equidimensional, but not necessarily prime, we check if the
+  //--- universal denominator is a non-zerodivisor of R/I. If not, we split I.
+     if((decomp == 1) or (decomp == 2))
+     {
+         ideal Id1 = myquotient(0,0,condu);
+         if(size(Id1) > 0)
+         {
+       //--- We have to split.
+            if(dbg >= 1)
+            {
+              "A zerodivisor was found. We split the ideal. The zerodivisor is ", condu;
+            }
+            setring R;
+            Id1 = fetch(Q, Id1), I;
+            Id1 = std(Id1);
+            ideal Id2 = myquotient(0,I, Id1);
+       //--- I = I1 \cap I2
+            printlevel = printlevel + 1;
+            ideal JDefault = 0; 
+       //--- Now it uses the default J;
+           list nor1 = normalMZ(Id1, decomp, withDelta, denomOption, JDefault, JDefault)[1];
+           list nor2 = normalMZ(Id2, decomp, withDelta, denomOption, JDefault, JDefault)[1];
+           printlevel = printlevel - 1;
+           return(list(nor1, nor2));
+        }
+     }
+  } 
+  else 
+  {
+    condu = 0;
+  }
+
+// --------------------- computation of the first test ideal ----------------------------
+//--- To compute the radical we go back to the original ring.
+//--- If we are using a non-global ordering, we must change to the global
+//--- ordering.
+  setring R;
+//--- If a test ideal is given at the input, we use it.
+  if(inputJ == 0)
+  {
+     if(isGlobal == 1)
+     {
+        ideal J = fetch(Q, J);
+        J = J, I;
+        if(dbg >= 1)
+        {
+          "The original singular locus is contained in";
+           std(J);
+           if(dbg >= 2)
+           { pause();}
+        "";
+        }
+   //--- We check if the only singular point is the origin.
+   //--- If so, the radical is the maximal ideal at the origin.
+        J = std(J);
+        if(locAtZero(J))
+        {
+           J = maxideal(1);
+        } 
+        else 
+        {
+           J = radicalZ(J);
+        }
+     } 
+     else 
+     {
+ //--- We change to global dp ordering.
+        list rl = ringlist(R);
+        list origOrd = rl[3];
+        list newOrd = list("dp", intvec(1:nvars(R))), list("C", 0);
+        rl[3] = newOrd;
+        def globR = ring(rl);
+        setring globR;
+        ideal J = fetch(Q, J);
+        ideal I = fetch(R, I);
+        J = J, I;
+        if(dbg >= 1)
+        {
+          "The original singular locus is contained in";
+           std(J);
+           if(dbg>=2)
+           {pause();}
+        "";
+        }
+        J = radicalZ(J);
+        setring R;
+        ideal J = fetch(globR, J);
+     }
+  } 
+  else 
+  {
+    ideal J = inputJ;
+  }
+
+  if(dbg >= 1)
+  {
+    "The original singular locus is contained in the radical";
+    J;
+    if(dbg>=2)
+    {pause();}
+  }
+
+// ------------------ election of the non zero divisor -----------------------
+  setring Q;
+  J = fetch(R, J);
+  J = interred(J);
+  if(denomOption == 0){
+    poly D = getSmallestZ(J);    // Chooses the polynomial of smallest degree as
+                                // non-zerodivisor.
+  } else {
+    poly D = getOneVar(J, denomOption);
+  }
+  if(dbg >= 1){
+    "The non zero divisor is ", D;
+    "";
+  }
+
+// ---------- splitting the ideal by the non-zerodivisor (if possible) --------
+//--- If the ideal is equidimensionensional, but not necessarily prime, we check 
+//--- if D is actually a non-zerodivisor of R/I. If not, we split I.
+  if((decomp == 1) or (decomp == 2))
+  {
+ //--- We check if D is actually a non-zerodivisor of R/I. If not, we split I.
+     ideal Id1 = myquotient(0,0, D);
+     if(size(Id1) > 0)
+     {
+    //--- We have to split.
+        if(dbg >= 1)
+        {
+          "A zerodivisor was found. We split the ideal. The zerodivisor is ", D;
+        }
+        setring R;
+        Id1 = fetch(Q, Id1), I;
+        Id1 = std(Id1);
+        ideal Id2 = myquotient(0,I, Id1);
+      //--- I = Id1 \cap Id2
+        printlevel = printlevel + 1;
+        ideal JDefault = 0;  // Now it uses the default J;
+        list nor1 = normalMZ(Id1, decomp, withDelta, denomOption, JDefault, JDefault)[1];
+        list nor2 = normalMZ(Id2, decomp, withDelta, denomOption, JDefault, JDefault)[1];
+        printlevel = printlevel - 1;
+        return(list(nor1, nor2));
+     }
+  }
+
+// ------------------------ normalization ---------------------------------------
+//--- We call normalMEquiZ to compute the normalization.
+  setring R;
+  D = fetch(Q, D);
+  condu = fetch(Q, condu);
+  J = fetch(Q, J);
+  printlevel = printlevel + 1;
+  list result = normalMEquiZ(I, J, condu, D, withDelta, denomOption);
+  printlevel = printlevel - 1;
+  return(list(result));
+}
+
+proc normalMEquiZ(ideal I, ideal origJ, poly condu, poly D, int withDelta)
+// Here is where the normalization is actually computed.
+// Computes the normalization of R/I. (basering is R)
+// I is assumed to be radical and equidimensional.
+// origJ is the first test ideal.
+// D is a non-zerodivisor of R/I.
+// condu is a non-zerodivisor in the conductor or 0 if it was not computed.
+// If withDelta = 1, computes the delta invariant.
+{
+  int step = 0;                       //--- Number of steps. (for debugging)
+  int dbg = printlevel - voice + 2;   //--- dbg = printlevel (default: dbg = 0)
+  int i;                              //--- counter
+  int isNormal = 0;                   //--- check for exiting the loop
+  int isGlobal = ord_test(basering);
+  int delt;
+
+  def R = basering;
+  poly c = D;
+  ideal U;
+  ideal cJ;
+  list testOut;                 
+//--- Output of proc testIdeal (the test ideal and the ring structure)
+
+  qring Q = std(I);
+  option("redSB");
+  option("returnSB");
+  ideal I = imap(R,I);
+  ideal J = imap(R, origJ);
+  poly c = imap(R, c);
+  poly D = imap(R, D);
+  poly condu = imap(R, condu);
+  ideal cJ;
+  ideal cJMod;
+
+  dbprint(dbg, "Preliminar step begins.");
+
+// --------------------- computation of A1 -------------------------------
+  dbprint(dbg, "Computing the quotient (DJ : J)...");
+ ideal  U = myquotient(I,D*J,J);
+  ideal oldU = 1;
+
+  if(dbg >= 2) { "The quotient is"; U; }
+
+// ----------------- Grauer-Remmert criterion check -----------------------
+//--- We check if the equality in Grauert - Remmert criterion is satisfied.
+  isNormal = checkInclusions(D*oldU, U);
+  if(isNormal == 0)
+  {
+    if(dbg >= 1)
+    {
+      "In this step, we have the ring 1/c * U, with c =", c;
+      "and U = "; U;
+    }
+  }
+  else
+  {
+//--- The original ring R/I was normal. Nothing to do.
+//--- We define anyway a new ring, equal to R, to be able to return it.
+     setring R;
+     list lR = ringlist(R);
+     def ROut = ring(lR);
+     setring ROut;
+     ideal norid = fetch(R, I);
+     ideal normap = maxideal(1);
+     export norid;
+     export normap;
+     setring R;
+     if(withDelta)
+     {
+       list output = ideal(1), poly(1), ROut, 0;
+     }
+     else
+     {
+       list output = ideal(1), poly(1), ROut;
+     }
+     return(output);
+  }
+
+// ------ computation of the chain of ideals A1 c A2 c ... c An -------------
+  while(isNormal == 0)
+  {
+     step++;
+     if(dbg >= 1) { ""; "Step ", step, " begins."; }
+     dbprint(dbg, "Computing the test ideal...");
+
+// ----------------- computation of the test ideal -------------------------
+//--- Computes a test ideal for the new ring. The test ideal will
+//--- be the radical in the new ring of the original test ideal
+     setring R;
+     U = imap(Q, U);
+     c = imap(Q, c);
+     testOut = testIdeal(I, U, origJ, c, D);
+     cJ = testOut[1];
+
+    setring Q;
+     cJ = imap(R, cJ);
+     cJ = std(cJ);
+    
+//--- cJ / c is now the ideal mapped back. We have the generators as an ideal in 
+//--- the new ring, but we want the generators as an ideal in the original ring.
+     cJMod = getGeneratorsZ(cJ, U, c);
+
+     if(dbg >= 2) { "The test ideal in this step is "; cJMod; }
+
+     cJ = cJMod;
+
+// --------------- computation of the quotient (DJ : J)----------------------
+     oldU = U;
+     dbprint(dbg, "Computing the quotient (c*D*cJ : cJ)...");
+     U = myquotient(I,c*D*cJ,cJ);
+//--- reduction is not immediate
+     if(dbg >= 2){"The quotient is "; U;}
+
+// --------------- Grauert - Remmert criterion check ------------------------
+//--- We check if the equality in Grauert - Remmert criterion is satisfied.
+     isNormal = checkInclusions(D*oldU, U);
+
+     if(isNormal == 1)
+     {
+    //--- We go one step back. In the last step we didnt get antyhing new,
+    //--- we just verified that the ring was already normal.
+        dbprint(dbg, "The ring in the previous step was already normal.");
+        dbprint(dbg, "");
+        U = oldU;
+     }
+     else
+     {
+// ------------------ preparation for next iteration -------------------------
+//--- We have to go on. The new denominator is chosen.
+        c = D * c;
+//--- If we have a universal denominator of smaller degree than c, we replace c by it.
+        if(condu != 0)
+        {
+           if(deg(c) > deg(condu))
+           {
+              U = changeDenominatorQ(U, c, condu);
+              c = condu;
+           }
+        }
+        if(dbg >= 1)
+        {
+          "In this step, we have the ring 1/c * U, with c =", c;
+          "and U = ";
+           U;
+           if(dbg>=2){pause();}
+        }
+     }
+  }
+
+// ------------------------- delta computation ----------------------------
+  if(withDelta)
+  {
+     ideal UD = std(U);
+     delt = vmydimension(std(modulo(UD, c)));
+  }
+
+// -------------------------- prepare output -----------------------------
+  setring R;
+  U = fetch(Q, U);
+  c = fetch(Q, c);
+
+//-- Ring structure of the new ring
+  def ere = testOut[2];
+  if(withDelta)
+  {
+    list output = U, c, ere, delt;
+  }
+  else
+  {
+    list output = U, c, ere;
+  }
+  return(output);
+}
+
+proc testIdeal(ideal I, ideal U, ideal origJ, poly c, poly D)
+{
+// Internal procedure, used in normalMZ. Computes the test ideal in the new ring.
+// It takes the original test ideal and computes the radical of it in the new ring.
+// The new ring is 1/c * U. The original test ideal is origJ.
+// The original ring is R / I, where R is the basering.
+  int i;                                //--- counter
+  int dbg = printlevel - voice + 2;     //--- dbg = printlevel (default: dbg = 0)
+  def R = basering;                     //--- We dont work in the quo
+  ideal J = origJ;
+
+// ------------ computation of the ring structure of 1/c * U ------------------
+  U = lineUp(U, c);
+
+  if(dbg > 1){"Computing the new ring structure...";}
+  list ele = computeRing(U, I, "noRed");
+
+  def origEre = ele[1];
+  setring origEre;
+  if(dbg > 1){"The relations are"; norid;}
+
+// ------------------ setting the ring to work in  ----------------------------
+  int isGlobal = ord_test(origEre);      
+//--- Checks if the original ring has global ordering.
+  if(isGlobal != 1)
+  {
+    list rl = ringlist(origEre);
+    list origOrd = rl[3];
+    list newOrd = list("dp", intvec(1:nvars(origEre))), list("C", 0);
+    rl[3] = newOrd;
+    def ere = ring(rl);     
+//--- globR is the original ring but with a global ordering.
+    setring ere;
+    ideal norid = imap(origEre, norid);
+  }
+  else
+  {
+    def ere = origEre;
+  }
+
+  ideal I = imap(R, I);
+  ideal J = imap(R, J);
+  J = J, norid, I;
+
+// -------- computation of the test ideal using the ring structure of Ai --------
+  option("redSB");
+  option("returnSB");
+
+  if(dbg > 1){"Computing the radical of J...";}
+  J = radicalZ(J);
+  if(dbg > 1){"Computing the interreduction of the radical...";}
+  J = std(J);
+//--- J = interred(J);
+  if(dbg > 1)
+  {
+    "The radical in the generated ring is";
+    J;
+    if(dbg>4){pause();}
+  }
+
+  setring ere;
+
+// ----------------- map from Ai to the total ring of fractions ------------------
+  // Now we must map back this ideal J to U_i / c in the total ring of
+  // fractions.
+  // The map sends T_j -> u_j / c.
+  // The map is built by the following steps:
+  // 1) We compute the degree of the generators of J with respect to the
+  //    new variables T_j.
+  // 2) For each generator, we multiply each term by a power of c, as if
+  //    taking c^n as a common denominator (considering the new variables as
+  //    a polynomial in the old variables divided by c).
+  // 3) We replace the new variables T_j by the corresponding numerator u_j.
+  // 4) We lift the resulting polynomial to change the denominator
+  //    from c^n to c.
+  int nNewVars = nvars(ere) - nvars(R);      // Number of new variables
+  poly c = imap(R, c);
+  intvec @v = 1..nNewVars;    // Vector of the new variables.
+                              // They must be the first ones.
+  if(dbg > 1){"The indices of the new variables are", @v;}
+
+// -------------------------- step 1 of the mapping -------------------------------
+  intvec degs;
+  for(i = 1; i<=ncols(J); i++)
+  {
+    degs[i] = degSubring(J[i], @v);
+  }
+  if(dbg > 1)
+  {
+    "The degrees with respect to the new variables are";
+    degs;
+  }
+
+// -------------------------- step 2 of the mapping --------------------------------
+  ideal mapJ = mapBackIdeal(J, c, @v);
+  setring R;
+
+// -------------------------- step 3 of the mapping --------------------------------
+  ideal z;                    
+//--- The variables of the original ring in order.
+  for(i = 1; i<=nvars(R); i++)
+  {
+    z[i] = var(i);
+  }
+  map f = ere, U[2..ncols(U)], z[1..ncols(z)]; 
+//--- The map to the original ring.
+  if(dbg > 1)
+  {
+    "The map is ";
+    f;
+    if(dbg>4){pause();}
+  }
+
+  if(dbg > 1){ "Computing the map..."; }
+
+  J = f(mapJ);
+  if(dbg > 1)
+  {
+    "The ideal J mapped back (before lifting) is";
+    J;
+    if(dbg>4){pause();}
+  }
+
+// -------------------------- step 4 of the mapping -------------------------------
+  qring Q = std(I);
+  ideal J = imap(R, J);
+  poly c = imap(R, c);
+  for(i = 1; i<=ncols(J); i++)
+  {
+    if(degs[i]>1)
+    {
+      J[i] = lift(c^(degs[i]-1), J[i])[1,1];
+    }
+    else
+    {
+      if(degs[i]==0) { J[i] = c*J[i]; }
+    }
+  }
+
+  if(dbg > 1)
+  {
+    "The ideal J lifted is";
+    J;
+    if(dbg>4){pause();}
+  }
+
+// --------------------------- prepare output ----------------------------
+  J = std(J);
+  setring R;
+  J = imap(Q, J);
+  return(list(J, ele[1]));
+}
+
+
+proc getOneVar(ideal J, int vari)
+{
+  def R = basering;
+  list RL = ringlist(R);
+//--- We keep everything from R but we change the ordering to lp, and we
+//--- order the variables as needed.
+  RL[3] = list(list("lp", 1:2), list("C", 0:1));
+  RL[2] = list(var(3-vari), var(vari));
+  RL[4]=ideal(0); 
+//--- does not work with qrings: Ex.7 of paraplanecurves
+  def RR = ring(RL);
+  setring RR;
+  ideal J = imap(R, J);
+  J = std(J);
+  poly g = J[1];
+  setring R;
+  poly g = imap(RR, g);
+  return(g);
+}
+
+proc lineUpLast(ideal U, poly c)
+{
+//--- Sets c as the last generator of U.
+  int i;
+  ideal newU;
+  for (i = 1; i <= ncols(U); i++)
+  {
+    if(U[i] != c)
+    {
+      if(size(newU) == 0)
+      { newU = U[i]; }
+      else
+      { newU = newU, U[i]; }
+    }
+  }
+  if(size(newU) == 0)
+  { newU = c; }
+  else
+  { newU = newU, c; }
+  return(newU);
+}
+
+proc lineUp(ideal U, poly c)
+//--- Sets c as the first generator of U.
+{
+  int i;
+  ideal newU = c;
+  for (i = 1; i <= ncols(U); i++)
+  {
+    if(U[i] != c)
+    {
+      newU = newU, U[i];
+    }
+  }
+  return(newU);
+}
+
+proc changeDenominatorQ(ideal U1, poly c1, poly c2)
+{
+//--- Given a ring in the form 1/c1 * U, it computes a new U2 s.th. the ring
+//--- is 1/c2 * U2.
+//--- The base ring is already a quotient ring R / I.
+  int a;      //--- counter
+  ideal U2;
+  poly p;
+  for(a = 1; a <= ncols(U1); a++)
+  {
+    p = lift(c1, c2*U1[a])[1,1];
+    U2[a] = p;
+  }
+  return(U2);
+}
+
+proc checkInclusions(ideal U1, ideal U2)
+{
+//--- Checks if the identity A = Hom(J, J) of Grauert-Remmert criterion is
+//--- satisfied.
+  int dbg = printlevel - voice + 2;     //--- dbg = printlevel (default: dbg = 0)
+  list reduction1;
+  list reduction2;
+
+// ------------------------ inclusion Hom(J, J) c A ---------------------------
+  if(dbg > 1){"Checking the inclusion Hom(J, J) c A:";}
+//--- This interred is used only because a bug in groebner!
+  U1 = std(U1);
+  reduction1 = reduce(U2, U1);
+  if(dbg > 1){reduction1[1];}
+
+// ------------------------ inclusion A c Hom(J, J) ---------------------------
+//--- The following check should always be satisfied.
+//--- This is only used for debugging.
+  if(dbg > 1)
+  {
+    "and the inclusion A c Hom(J, J): (this should always be satisfied)";
+    U2 = std(U2);
+    reduction2 = reduce(U1, std(U2));
+    reduction2[1];
+    if(size(reduction2[1]) > 0)
+    {
+      "Something went wrong... (this inclusion should always be satisfied)";
+      ~;
+    }
+    else
+    {
+      if(dbg>4){pause();}
+    }
+  }
+
+  if(size(reduction1[1]) == 0)
+  {
+//--- We are done! The ring computed in the last step was normal.
+    return(1);
+  }
+  else
+  {
+    return(0);
+  }
+}
+
+proc degSubring(poly p, intvec @v)
+{
+//--- Computes the degree of a polynomial taking only some variables as 
+//--- variables and the others as parameters.
+
+//--- The degree is taken w.r.t. the variables indicated in v.
+  int i;      //--- Counter
+  int d = 0;  //--- The degree
+  int e;      //--- Degree (auxiliar variable)
+  for(i = 1; i <= size(p); i++)
+  {
+    e = sum(leadexp(p[i]), @v);
+    if(e > d){d = e;}
+  }
+  return(d);
+}
+
+proc mapBackIdeal(ideal I, poly c, intvec @v)
+{
+//--- Modifies all polynomials in I so that a map x(i) -> y(i)/c can be
+//--- carried out.
+
+//--- v indicates wich variables x(i) of the ring will be mapped to y(i)/c.
+
+  int i;  
+//--- counter
+  for(i = 1; i <= ncols(I); i++)
+  {
+    I[i] = mapBackPoly(I[i], c, @v);
+  }
+  return(I);
+}
+
+proc mapBackPoly(poly p, poly c, intvec @v)
+{
+//--- Multiplies each monomial of p by a power of c so that a map x(i) -> y(i)/c
+//--- can be carried out.
+
+//--- v indicates wich variables x(i) of the ring will be mapped to y(i)/c.
+  int i;  //--- counter
+  int e;  //--- exponent
+  int d = degSubring(p, @v);
+  poly g = 0;
+  int size_p=size(p);
+  for(i = 1; i <= size_p; i++)
+  {
+    e = sum(leadexp(p[i]), @v);
+    g = g + p[i] * c^(d-e);
+  }
+  return(g);
+}
+
+

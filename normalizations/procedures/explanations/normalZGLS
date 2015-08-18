@@ -1,0 +1,271 @@
+﻿
+ . .10 normalZGLS
+.................
+
+Procedure from library `normalint.lib' (*note normalint_lib::).
+
+*Usage:*
+     normalZGLS(i [,choose]); i = radical ideal, choose = list of
+     options.
+     Optional parameters in list choose (can be entered in any order):
+     Decomposition:
+     - "equidim" -> computes first an equidimensional decomposition,
+     and then the normalization of each component (default).
+     - "prim" -> computes first the minimal associated primes, and then
+     the normalization of each prime.
+     - "noDeco" -> no preliminary decomposition is done. If the ideal is
+     not equidimensional radical, output might be wrong.
+     - "isPrim" -> assumes that the ideal is prime. If this assumption
+     does not hold, the output might be wrong.
+     - "noFac" -> factorization is avoided in the computation of the
+     minimal associated primes;
+     Other:
+     - "useRing" -> uses the original ring ordering.
+     If this option is set and if the ring ordering is not global,
+     normal will change to a global ordering only for computing
+     radicals and prime or equidimensional decompositions.
+     If this option is not set, normal changes to dp ordering and
+     performs all computations with respect to this ordering.
+     - list("inputJ", ideal inputJ) -> takes as initial test ideal the
+     ideal inputJ. This option is only for use in other procedures.
+     Using this option, the result might not be the normalization.
+     (Option only valid for global algorithm.)
+     - list("inputC", ideal inputC) -> takes as initial conductor the
+     ideal inputC. This option is only for use in other procedures.
+     Using this option, the result might not be the normalization.
+     (Option only valid for global algorithm.)
+     Options used for computing integral basis (over rings of two
+     variables):
+     - "var1" -> uses a polynomial in the first variable as universal
+     denominator.
+     - "var2" -> uses a polynomial in the second variable as universal
+     denominator.
+     If the optional parameter choose is not given or empty, only
+     "equidim" but no other option is used.
+*Assume:*
+     The ideal must be radical, for non-radical ideals the output may
+     be wrong (id=radical(id); makes id radical). However, when using
+     the "prim" option the minimal associated primes of id are computed
+     first and hence normal computes the normalization of the radical
+     of id.
+*Note_*
+     "isPrim" should only be used if i is known to be prime.
+
+*Return:*
+     a list, say nor, of size 2
+     @format Let R denote the basering and i the input ideal.  *
+     nor[1] is a list of r rings, where r is the number of associated
+     primes P_i with option "prim" (resp. >= no of equidimenensional
+     components P_i with option "equidim").
+     Each ring Ri := nor[1][i], i=1..r, contains two ideals with given
+     names `norid' and `normap' such that:
+     - Ri/norid is the normalization of the i-th component, i.e. the
+     integral closure of R/P_i in its field of fractions (as affine
+     ring); - `normap' gives the normalization map from R/id to
+     Ri/norid for each i.
+     - the direct sum of the rings Ri/norid, i=1,..r, is the
+     normalization of R/id as a scheme;
+     * nor[2] is a list of size r with information on the normalization
+     of the i-th component as module over the basering R:
+     nor[2][i] is an ideal, say U, in R such that the integral closure
+     of basering/P_i is generated as module over R by 1/c * U, with c
+     the last element U[size(U)] of U.
+     @end format
+
+*Theory:*
+     We use here a general algorithm described in [G.-M.Greuel,
+     S.Laplagne, F.Seelisch: Normalization of Rings (2009)].
+     The procedure computes the R-module structure and the scheme
+     structure of the normalization of R/id:
+     The normalization of R/id is the integral closure of R/id in its
+     total ring of fractions. It is a finitely generated R-module and
+     nor[2] computes R-module generators of it. More precisely: If
+     U:=nor[2][i] and c:=U[size(U)], then c is a non-zero divisor and
+     U/c is an R-module in the total ring of fractions, the integral
+     closure of R/P_i. Since U[size(U)]/c is equal to 1, R/P_i resp.
+     R/id is contained in the integral closure.
+     The normalization is also a R-scheme and nor[1] presents it 
+     as such. For geometric considerations nor[1] is 
+     relevant since the variety of the ideal norid in Ri is
+     the normalization of the variety of the ideal P_i in R.
+     
+
+*Note_*
+     To use the i-th ring type e.g.: `def R=nor[1][i]; setring R;'.
+     Increasing/decreasing printlevel displays more/less comments
+     (default: printlevel=0).
+     Implementation works also for local rings.
+     Not implemented for quotient rings.
+     If the input ideal id is weighted homogeneous a weighted ordering
+     may be used together with the useRing-option (qhweight(id);
+     computes weights).
+
+*Example:*
+     LIB "normalint.lib";
+     printlevel = printlevel+1;
+     ideal I=-y4z4+x3y4+x2yz4-x5y
+     list n=normalZGLS(I,"prim");
+     ==>// Computing the minimal associated primes...
+     ==>[1]:
+     ==> _[1]=z4-x3
+    ==>[2]:
+     ==>_[1]=y
+    ==>[3]:
+    ==>_[1]=y3-x2
+    ==>
+    ==>// number of components is 3
+    ==>
+    ==>// start computation of component 1
+    ==> --------------------------------
+    ==>Computing the jacobian ideal...
+    ==>
+    ==>The universal denominator is  3x2
+    ==>The original singular locus is contained in
+    ==>_[1]=3x2
+    ==>_[2]=4z3
+    ==>_[3]=x3
+     ==>_[4]=z4
+     ==>_[5]=x2z3
+     ==>
+     ==>The original singular locus is contained in the radical
+     ==>J[1]=z
+     ==>J[2]=x
+     ==>The non zero divisor is  z
+     ==>
+     ==>Preliminar step begins.
+     ==>Computing the quotient (DJ : J)...
+     ==>In this step, we have the ring 1/c * U, with c = z
+     ==>and U = 
+     ==>U[1]=z
+     ==>U[2]=x2
+     ==>
+     ==>Step  1  begins.
+     ==>Computing the test ideal...
+     ==>Computing the quotient (c*D*cJ : cJ)...
+     ==>In this step, we have the ring 1/c * U, with c = z2
+     ==>and U = 
+     ==>U[1]=z2
+     ==>U[2]=xz
+     ==>U[3]=x2
+     ==>
+     ==>Step  2  begins.
+     ==>Computing the test ideal...
+     ==>Computing the quotient (c*D*cJ : cJ)...
+     ==>The ring in the previous step was already normal.
+     ==>
+     ==>// start computation of component 2
+     ==>  --------------------------------
+     ==>Computing the jacobian ideal...
+     ==>// start computation of component 3
+     ==>  --------------------------------
+     ==>Computing the jacobian ideal...
+     ==>
+     ==>The universal denominator is  2x
+     ==>The original singular locus is contained in
+     ==>_[1]=2x
+     ==>_[2]=3y2
+     ==>_[3]=x2
+     ==>_[4]=y3
+     ==>_[5]=xy2
+     ==>
+     ==>The original singular locus is contained in the radical
+     ==>J[1]=y
+     ==>J[2]=x
+     ==>The non zero divisor is  y
+     ==>
+     ==>Preliminar step begins.
+     ==>Computing the quotient (DJ : J)...
+     ==>In this step, we have the ring 1/c * U, with c = y
+     ==>and U = 
+     ==>U[1]=y
+     ==>U[2]=x
+     ==>
+     ==>Step  1  begins.
+     ==>Computing the test ideal...
+     ==>Computing the quotient (c*D*cJ : cJ)...
+     ==>The ring in the previous step was already normal.
+     n;
+     ==>[1]:
+     ==>   [1]:
+      ==>     //   coeff. ring is : Integers
+     ==>//   number of vars : 5
+     ==>//        block   1 : ordering dp
+     ==>//                  : names    T(1) T(2)
+     ==>//        block   2 : ordering dp
+     ==>//                  : names    x y z
+     ==>//        block   3 : ordering C
+     ==>   [2]:
+      ==>     //   coeff. ring is : Integers
+     ==>//   number of vars : 3
+     ==>//        block   1 : ordering dp
+     ==>//                  : names    x y z
+     ==>//        block   2 : ordering C
+     ==>   [3]:
+     ==>      //   coeff. ring is : Integers
+     ==>//   number of vars : 4
+     ==>//        block   1 : ordering dp
+     ==>//                  : names    T(1)
+     ==>//        block   2 : ordering dp
+     ==>//                  : names    x y z
+     ==>//        block   3 : ordering C
+     ==>[2]:
+     ==>   [1]:
+      ==>     _[1]=xz
+      ==>     _[2]=x2
+     ==>      _[3]=z2
+     ==>   [2]:
+     ==>      _[1]=1
+     ==>   [3]:
+     ==>      _[1]=x
+     ==>      _[2]=y
+//--- n[2][i] = U shows the normalization of P_i as R-module M
+//--- where M = 1/U[size(U)]*U
+//--- P_2 was already a normal component of I
+//--- we look at the normalization of the first component:
+    def r1 = n[1][1];
+    setring r1;
+    norid;
+     ==> norid[1]=T(1)*z-x
+     ==> norid[2]=-T(1)*x+T(2)*z
+     ==> norid[3]=-T(2)*x+z^2
+     ==> norid[4]=-T(1)*z^3+T(2)*x^2
+     ==> norid[5]=T(1)^2-T(2)
+     ==> norid[6]=T(1)*T(2)-z
+     ==> norid[7]=T(2)^2-x
+     ==> norid[8]=z^4-x^3
+//--- eliminating needless variables
+     list e = elimvar(norid,normap);
+     e;
+     ==>[1]:
+     ==>   //   coeff. ring is : Integers
+     ==>//   number of vars : 2
+     ==>//        block   1 : ordering dp
+     ==>//                  : names    T(1) y
+     ==>//        block   2 : ordering C
+     ==>[2]:
+     ==>   eli
+     ==>[3]:
+     ==>   ephi
+     ==>[4]:
+     ==>   1
+//--- e[4]=1 means, that there were variables substituted
+     def r2 = e[1];
+     setring r2;
+     ideal norid=eli;
+     ideal normap=ephi;
+     norid;
+     ==> norid[1]=0
+//--- the normalization of P_1 as a e[1]-scheme
+     normap;
+     ==> normap[1]=T(1)^4
+     ==> normap[2]=y
+     ==> normap[3]=T(1)^3
+//--- the normalization map
+     setring r;
+
+* Menu:
+
+See also:
+* normalZ::
+* normalC::
+* normalP::

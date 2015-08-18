@@ -1,0 +1,100 @@
+ . . .9 normalZ
+...............
+
+Procedure from library `normalint.lib' (*note normal_lib::).
+
+*Usage:*
+     normalZ (ideal i ); 
+
+
+*Assume:*
+     The ideal i in the basering r must be radical, for non-radical ideals the 
+     output may be wrong (id=Radical(id); makes id radical).
+
+*Compute:*
+     The normalization of the ring r/i through an increasing chain of rings
+
+*Return:*
+      a list l of n sublists, where n is the number of minimal associated primes of i
+      (say P_1,..,P_n), and each sublist consists of three objects
+              l[k][1] : a polynomial ring, containing two ideals, 'norid' and 'normap'
+                    such that l[k][1]/norid is the normalization of the ring r/P_k and
+                    normap describes the corresponding normalization map
+              l[k][2] : "norid"
+              l[k][3] : "normap"
+      for k=1,..,n
+
+*Theory:*
+      We use the Grauert-Remmert-de Jong algorithm [c.f. G.-M. Greuel,
+      G. Pfister: A SINGULAR Introduction to Commutative Algebra, 2nd
+      Edition.  Springer Verlag (2007)].
+      The procedure computes the module structure of the normalization 
+      of r/i:
+      The normalization is a scheme over the integers and
+      l[1] presents it as such: Ri = Z[X(1..p),T(2..n)] and Ri/norid
+      is the integral closure of r/P_i; 
+
+*Note:*
+      To use the i-th ring type: `def R=l[k][1]; setring R;'.
+      Not implemented for local or mixed orderings or quotient rings.
+      For local or mixed orderings use proc 'normalZGLS'.
+              
+
+*Example:*
+        LIB "normalint.lib";
+        ring  r = integer,(x,y,z),dp;
+        ideal i=(x3-y2)*(y5-z2);
+        minAssZ(i);
+        ==> [1]:
+        ==>    _[1]=y5-z2
+        ==> [2]:
+        ==>    _[1]=x3-y2
+        list l=normalZ(i);
+        l;
+        ==> [1]:
+        ==>    [1]:
+        ==>       //   coeff. ring is : Integers
+        ==> //   number of vars : 2
+        ==> //        block   1 : ordering dp
+        ==> //                  : names    X(1) X(2)
+        ==> //        block   2 : ordering C
+        ==>    [2]:
+        ==>       norid
+        ==>    [3]:
+        ==>       normap
+        ==> [2]:
+        ==>    [1]:
+        ==>       //   coeff. ring is : Integers
+        ==> //   number of vars : 2
+        ==> //        block   1 : ordering dp
+        ==> //                  : names    X(1) X(2)
+        ==> //        block   2 : ordering C
+        ==>    [2]:
+        ==>       norid
+        ==>    [3]:
+        ==>       normap
+        def R1=l[1][1];
+        setring R1;
+        norid;
+        ==> norid[1]=0
+        normap;
+        ==> normap[1]=X(1)
+        ==> normap[2]=X(2)^2
+        ==> normap[3]=X(2)^5
+        def R2=l[2][1];
+        setring R2;
+        norid;
+        ==> norid[1]=0
+        normap;
+        ==> normap[1]=X(2)^2
+        ==> normap[2]=X(2)^3
+        ==> normap[3]=X(1)
+
+* Menu:
+
+See also:
+* normalZGLS::
+* normal::
+* normalC::
+* normalP::
+
