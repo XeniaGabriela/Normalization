@@ -3,5 +3,5 @@ Computer Algebra Algorithms for Normalzation of Polynomial Rings over the Intege
 
 ## Abstract
 
-Algorithms to compute the integral closure of a reduced Noetherian ring in its total ring of fractions. 
-Implementations in the Computer Algebra Language Singular.
+Normalization of a reduced Noetherian ring means to compute its integral closure in its total ring of fractions. 
+Implementations in the Computer Algebra Language Singular. Research for the Leibniz University Hanover in the context of the SPP-1489, Algorithmic and experimental methods in algebra, geometry, and number theory.
